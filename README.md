@@ -1,52 +1,82 @@
 # HAWK: Hackberry Assessment Web Kit — Scaffold v0.1
 
-A touch-friendly Ruby web app (Sinatra) that provides big-button menus to launch Wi‑Fi, BLE, Network, Payload, and Phishing attacks using existing tools (wifite, bettercap, hcxdumptool, blue-hydra, responder, msfconsole, evilginx3, pwncat-cs, etc.).
+Touch‑first Ruby (Sinatra) web app that glues proven tools (Metasploit, Evilginx3, Bettercap, Wifite, Responder, Impacket, etc.). This version delivers ALL LANES:
 
-Designed as glue: minimal typing; you select category → attack → fill minimal fields (IP/port, interface) only when needed. Long‑running tasks are spawned in tmux with logs saved to data/logs/.
+Metasploit RPC workflows (start/stop RPC, connect, list workspaces/sessions, run exploits/handlers)
 
-Start here: bundle install && bin/run then open http://127.0.0.1:4567 (fullscreen browser for touch UI).
+Interface autodetect (Wi‑Fi/BLE/LAN dropdowns)
+
+Profiles (auto‑save last inputs per action)
+
+Rogue AP suite (hostapd‑wpe, eaphammer)
+
+Tunneling pack (ligolo‑ng, autossh)
+
+Tail logs (live log viewer)
+
+Status/Config (from v0.2)
+
+Start: bundle install && bin/run → http://127.0.0.1:4567 (fullscreen/touch)
 
 ## File Tree
 
 ```bash
-HAWK/
+hawk/
 ├─ Gemfile
 ├─ app.rb
 ├─ config/
 │  └─ config.yml
 ├─ core/
-│  ├─ exec.rb
+│  ├─ exec.rb           # run/tmux helpers (+list/kill)
 │  ├─ module_base.rb
 │  ├─ registry.rb
-│  └─ ui_helpers.rb
+│  ├─ ui_helpers.rb
+│  ├─ ifaces.rb         # NEW: interface discovery
+│  └─ profiles.rb       # NEW: per‑action last‑used inputs
 ├─ modules/
+│  ├─ utils/
+│  │  └─ iface_tools.rb
 │  ├─ wifi/
 │  │  ├─ wifite.rb
 │  │  ├─ hcxdump.rb
-│  │  └─ bettercap_beacon.rb
+│  │  ├─ airodump.rb
+│  │  ├─ bettercap_beacon.rb
+│  │  ├─ wifiphisher.rb
+│  │  ├─ hostapd_wpe.rb       # NEW
+│  │  └─ eaphammer.rb         # NEW
 │  ├─ ble/
 │  │  ├─ ble_scan_bettercap.rb
 │  │  └─ blue_hydra.rb
 │  ├─ network/
 │  │  ├─ nmap_quick.rb
 │  │  ├─ responder.rb
-│  │  └─ mitm_bettercap.rb
-│  ├─ payloads/
-│  │  ├─ msf_handler.rb
-│  │  └─ pwncat.rb
-│  └─ phishing/
-│     └─ evilginx3.rb
+│  │  ├─ mitm_bettercap.rb
+│  │  ├─ ntlmrelayx.rb
+│  │  ├─ chisel.rb
+│  │  ├─ ligolo.rb            # NEW
+│  │  └─ autossh.rb           # NEW
+│  └─ payloads/
+│     ├─ msf_handler.rb
+│     ├─ pwncat.rb
+│     ├─ msf_rpc.rb
+│     ├─ msf_rpcd.rb          # NEW: start/stop RPC via msgrpc
+│     ├─ msf_exploit.rb       # NEW: run exploit module via RPC
+│     └─ msf_sessions.rb      # NEW: list sessions via RPC
 ├─ views/
 │  ├─ layout.erb
 │  ├─ index.erb
 │  ├─ category.erb
-│  ├─ module.erb
-│  └─ run.erb
+│  ├─ module.erb              # supports <select> options
+│  ├─ run.erb
+│  ├─ status.erb
+│  ├─ config.erb
+│  └─ log_view.erb            # NEW
 ├─ public/
 │  └─ app.css
 ├─ data/
-│  ├─ logs/           # runtime logs
-│  └─ captures/       # pcap/pmkid dumps etc
+│  ├─ logs/
+│  ├─ captures/
+│  └─ profiles.json           # NEW
 └─ bin/
    └─ run
 ```
