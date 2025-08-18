@@ -1,0 +1,12 @@
+<a class="back" href="/">← Home</a>
+<h2>Task started</h2>
+<% if @result %>
+  <pre class="log">Session: <%= @result[:session] %>\nCMD: <%= @result[:cmd] %>\nLog: <%= @result[:log] %></pre>
+<% end %>
+
+<h3>Logs</h3>
+<ul>
+  <% (@logs || []).each do |l| %>
+    <li><code><%= l %></code></li>
+  <% end %>
+</ul>
