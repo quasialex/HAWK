@@ -1,4 +1,4 @@
-## APEX -  Adaptive Penetration Exploit X-framework — Scaffold v0.1
+# APEX -  Adaptive Penetration Exploit X-framework — Scaffold v0.1
 
 A touch-friendly Ruby web app (Sinatra) that provides big-button menus to launch Wi‑Fi, BLE, Network, Payload, and Phishing attacks using existing tools (wifite, bettercap, hcxdumptool, blue-hydra, responder, msfconsole, evilginx3, pwncat-cs, etc.).
 
@@ -6,8 +6,9 @@ Designed as glue: minimal typing; you select category → attack → fill minima
 
 Start here: bundle install && bin/run then open http://127.0.0.1:4567 (fullscreen browser for touch UI).
 
-# File Tree
+## File Tree
 
+```bash
 hackberry-fw/
 ├─ Gemfile
 ├─ app.rb
@@ -48,3 +49,4 @@ hackberry-fw/
 │  └─ captures/       # pcap/pmkid dumps etc
 └─ bin/
    └─ run
+```
