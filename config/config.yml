@@ -1,0 +1,12 @@
+defaults:
+  interfaces:
+    wifi: wlan0
+    wifi_mon: wlan0mon
+    ble: hci0
+    lan: eth0
+  paths:
+    logs: data/logs
+    captures: data/captures
+    caplets: caplets
+    phishlets: /opt/evilginx/phishlets
+  tmux_prefix: hb
