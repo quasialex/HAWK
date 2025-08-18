@@ -1,4 +1,4 @@
-# APEX -  Adaptive Penetration Exploit X-framework — Scaffold v0.1
+# HAWK: Hackberry Assessment Web Kit — Scaffold v0.1
 
 A touch-friendly Ruby web app (Sinatra) that provides big-button menus to launch Wi‑Fi, BLE, Network, Payload, and Phishing attacks using existing tools (wifite, bettercap, hcxdumptool, blue-hydra, responder, msfconsole, evilginx3, pwncat-cs, etc.).
 
