@@ -83,14 +83,60 @@ hawk/
 
 ## Minimal install checklist (Kali/Hackberry)
 
-```bash
+---
 
+### 📌 Evilginx2 (phish proxy for 2FA bypass)
+
+```bash
+# Dependencies
+sudo apt install -y git make go
+
+# Clone repo
+git clone https://github.com/kgretzky/evilginx2.git
+cd evilginx2
+
+# Build
+make
+
+# Move binary into PATH
+sudo mv bin/evilginx /usr/local/bin/
+
+# Test
+evilginx -h
+
+```
+
+Needs a public VPS + domain for real-world phishing; local use limited.
+
+---
+
+### 📌 pwncat-cs (post-exploitation / C2-ish tool)
+
+```bash
+# Dependencies
+sudo apt install -y python3 python3-pip
+
+# Install via pipx (recommended for isolation)
+python3 -m pip install --user pipx
+python3 -m pipx ensurepath
+
+# Install pwncat-cs
+pipx install git+https://github.com/calebstewart/pwncat.git
+
+# Or without pipx:
+pip3 install git+https://github.com/calebstewart/pwncat.git
+```
+
+```bash
 sudo apt update && sudo apt install -y \
   ruby-full build-essential tmux \
   wifite aircrack-ng hcxdumptool bettercap bluez bluez-hcidump blue-hydra \
-  nmap responder metasploit-framework evilginx pwncat-cs \
-  wifiphisher impacket-scripts chisel macchanger hostapd-wpe eaphammer \
+  nmap responder metasploit-framework \
+  impacket-scripts chisel macchanger hostapd-wpe eaphammer \
   ligolo-ng autossh
+```
+
+```bash
 
 # optional RPC gem
 sudo gem install msfrpc-client
