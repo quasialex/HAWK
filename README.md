@@ -63,5 +63,5 @@ sudo apt update && sudo apt install -y ruby-full build-essential tmux \
 # sudo setcap cap_net_raw,cap_net_admin=eip $(which bettercap)
 
 bundle install
-bin/run
+bin/run → open http://127.0.0.1:4567 (fullscreen for touch).
 ```
