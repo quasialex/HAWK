@@ -9,7 +9,7 @@ Start here: bundle install && bin/run then open http://127.0.0.1:4567 (fullscree
 ## File Tree
 
 ```bash
-hackberry-fw/
+HAWK/
 ├─ Gemfile
 ├─ app.rb
 ├─ config/
