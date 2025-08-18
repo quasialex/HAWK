@@ -89,7 +89,7 @@ hawk/
 
 ```bash
 # Dependencies
-sudo apt install -y git make go
+sudo apt install -y git make golang
 
 # Clone repo
 git clone https://github.com/kgretzky/evilginx2.git
@@ -114,17 +114,14 @@ Needs a public VPS + domain for real-world phishing; local use limited.
 
 ```bash
 # Dependencies
-sudo apt install -y python3 python3-pip
+sudo apt install -y python3 python3-pip python3-distutils-extrapip
 
 # Install via pipx (recommended for isolation)
-python3 -m pip install --user pipx
 python3 -m pipx ensurepath
 
 # Install pwncat-cs
 pipx install git+https://github.com/calebstewart/pwncat.git
 
-# Or without pipx:
-pip3 install git+https://github.com/calebstewart/pwncat.git
 ```
 
 ```bash
