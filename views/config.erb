@@ -1,0 +1,11 @@
+<a class="back" href="/">← Home</a>
+<h2>Config</h2>
+<form class="form" method="post" action="/config">
+  <div class="inputs">
+    <label><span>Wi‑Fi iface</span><input name="wifi" value="<%= @cfg['interfaces']['wifi'] %>"></label>
+    <label><span>Wi‑Fi monitor iface</span><input name="wifi_mon" value="<%= @cfg['interfaces']['wifi_mon'] %>"></label>
+    <label><span>BLE iface</span><input name="ble" value="<%= @cfg['interfaces']['ble'] %>"></label>
+    <label><span>LAN iface</span><input name="lan" value="<%= @cfg['interfaces']['lan'] %>"></label>
+  </div>
+  <button type="submit">Save</button>
+</form>
