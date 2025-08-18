@@ -50,3 +50,18 @@ hackberry-fw/
 └─ bin/
    └─ run
 ```
+
+## Minimal install checklist (Kali/Hackberry)
+
+```bash
+
+sudo apt update && sudo apt install -y ruby-full build-essential tmux \
+  wifite aircrack-ng hcxdumptool bettercap bluez bluez-hcidump blue-hydra \
+  nmap responder metasploit-framework evilginx pwncat-cs
+
+# (Optional) setcap for bettercap if needed for packet injection
+# sudo setcap cap_net_raw,cap_net_admin=eip $(which bettercap)
+
+bundle install
+bin/run
+```
