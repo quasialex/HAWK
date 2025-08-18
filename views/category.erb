@@ -1,0 +1,11 @@
+<a class="back" href="/">← Back</a>
+<h2><%= @cat.to_s.capitalize %></h2>
+<section class="grid">
+  <% @mods.each do |m| %>
+    <a class="card" href="/module/<%= m.id %>">
+      <div class="icon"><%= m.icon %></div>
+      <div class="title"><%= m.label %></div>
+      <div class="subtitle"><%= m.id %></div>
+    </a>
+  <% end %>
+</section>
