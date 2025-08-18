@@ -1,0 +1,9 @@
+<section class="grid">
+  <% @by_cat.each do |cat, mods| %>
+    <a class="card" href="/category/<%= cat %>">
+      <div class="icon"><%= big_icon(cat) %></div>
+      <div class="title"><%= cat.to_s.capitalize %></div>
+      <div class="subtitle"><%= mods.size %> tools</div>
+    </a>
+  <% end %>
+</section>
