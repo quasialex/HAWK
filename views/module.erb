@@ -3,7 +3,7 @@
 <p class="muted"><%= @mod.id %> — <%= @mod.category %></p>
 
 <section>
-  <% @mod.actions.each do |a| %>
+  <% (@actions || @mod.actions).each do |a| %>
     <form class="form" method="post" action="/run/<%= @mod.id %>/<%= a[:id] %>">
       <h3><%= a[:label] %></h3>
       <p class="desc"><%= a[:description] %></p>
@@ -11,7 +11,15 @@
         <% a[:inputs].each do |i| %>
           <label>
             <span><%= i[:label] %></span>
-            <input type="<%= i[:type] || 'text' %>" name="<%= i[:name] %>" placeholder="<%= i[:placeholder] %>" value="<%= i[:default] %>" />
+            <% if i[:type] == 'select' %>
+              <select name="<%= i[:name] %>">
+                <% (i[:options] || []).each do |opt| %>
+                  <option value="<%= opt %>" <%= 'selected' if i[:default].to_s == opt.to_s %>><%= opt %></option>
+                <% end %>
+              </select>
+            <% else %>
+              <input type="<%= i[:type] || 'text' %>" name="<%= i[:name] %>" placeholder="<%= i[:placeholder] %>" value="<%= i[:default] %>" />
+            <% end %>
           </label>
         <% end %>
       </div>
