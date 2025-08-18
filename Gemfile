@@ -4,5 +4,8 @@ gem 'sinatra', require: 'sinatra/base'
 gem 'rack-protection'
 gem 'json'
 gem 'tilt'
-# Optional: use Puma for better perf; fallback to WEBrick
 gem 'puma'
+# optional but handy for settings + JSON helpers
+gem 'sinatra-contrib'
+# optional: RPC client for Metasploit (you can comment if not available)
+gem 'msfrpc-client'
