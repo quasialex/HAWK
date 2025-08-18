@@ -1,0 +1,17 @@
+<a class="back" href="/">← Home</a>
+<h2>Sessions</h2>
+<% if @sessions.empty? %>
+  <p class="muted">No tmux sessions.</p>
+<% else %>
+  <ul class="sessions">
+    <% @sessions.each do |s| %>
+      <li>
+        <code><%= s %></code>
+        <form method="post" action="/status/<%= s %>" style="display:inline">
+          <input type="hidden" name="_method" value="delete" />
+          <button type="submit">Kill</button>
+        </form>
+      </li>
+    <% end %>
+  </ul>
+<% end %>
