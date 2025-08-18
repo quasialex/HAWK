@@ -1,0 +1,21 @@
+<a class="back" href="/">← Home</a>
+<h2><%= @mod.label %></h2>
+<p class="muted"><%= @mod.id %> — <%= @mod.category %></p>
+
+<section>
+  <% @mod.actions.each do |a| %>
+    <form class="form" method="post" action="/run/<%= @mod.id %>/<%= a[:id] %>">
+      <h3><%= a[:label] %></h3>
+      <p class="desc"><%= a[:description] %></p>
+      <div class="inputs">
+        <% a[:inputs].each do |i| %>
+          <label>
+            <span><%= i[:label] %></span>
+            <input type="<%= i[:type] || 'text' %>" name="<%= i[:name] %>" placeholder="<%= i[:placeholder] %>" value="<%= i[:default] %>" />
+          </label>
+        <% end %>
+      </div>
+      <button type="submit">Run</button>
+    </form>
+  <% end %>
+</section>
