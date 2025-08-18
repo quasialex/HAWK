@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p data/logs data/captures
+export RACK_ENV=${RACK_ENV:-production}
+exec bundle exec ruby app.rb -o 0.0.0.0 -p 4567
