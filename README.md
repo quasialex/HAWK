@@ -1,4 +1,4 @@
-# HAWK: Hackberry Assessment Web Kit — Scaffold v0.1
+# HAWK: Hackberry Assessment Web Kit
 
 Touch‑first Ruby (Sinatra) web app that glues proven tools (Metasploit, Evilginx3, Bettercap, Wifite, Responder, Impacket, etc.). This version delivers ALL LANES:
 
@@ -89,7 +89,11 @@ sudo apt update && sudo apt install -y \
   ruby-full build-essential tmux \
   wifite aircrack-ng hcxdumptool bettercap bluez bluez-hcidump blue-hydra \
   nmap responder metasploit-framework evilginx pwncat-cs \
-  wifiphisher impacket-scripts chisel macchanger
+  wifiphisher impacket-scripts chisel macchanger hostapd-wpe eaphammer \
+  ligolo-ng autossh
+
+# optional RPC gem
+sudo gem install msfrpc-client
 
 bundle install
 
