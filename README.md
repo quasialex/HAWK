@@ -55,13 +55,13 @@ HAWK/
 
 ```bash
 
-sudo apt update && sudo apt install -y ruby-full build-essential tmux \
+sudo apt update && sudo apt install -y \
+  ruby-full build-essential tmux \
   wifite aircrack-ng hcxdumptool bettercap bluez bluez-hcidump blue-hydra \
-  nmap responder metasploit-framework evilginx pwncat-cs
-
-# (Optional) setcap for bettercap if needed for packet injection
-# sudo setcap cap_net_raw,cap_net_admin=eip $(which bettercap)
+  nmap responder metasploit-framework evilginx pwncat-cs \
+  wifiphisher impacket-scripts chisel macchanger
 
 bundle install
+
 bin/run → open http://127.0.0.1:4567 (fullscreen for touch).
 ```
