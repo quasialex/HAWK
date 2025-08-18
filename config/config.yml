@@ -9,4 +9,4 @@ defaults:
     captures: data/captures
     caplets: caplets
     phishlets: /opt/evilginx/phishlets
-  tmux_prefix: hb
+  tmux_prefix: hawk
