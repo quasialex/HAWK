@@ -132,7 +132,7 @@ This installs `python3.11` alongside 3.13 without breaking the system.
 Then you can do:
 
 ```bash
-pipx install --python python3.11 pwncat-csp
+pipx install --python python3.11 pwncat-cs
 ```
 ---
 ```bash
