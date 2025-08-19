@@ -16,44 +16,10 @@
       <a class="pill" href="/caplets">Caplets</a>
       <a class="pill" href="/config">Config</a>
     </nav>
+    <h1>HAWK</h1>
   </header>
   <main>
     <%= yield %>
   </main>
-
-
-<!-- global datalist for MSF module autocomplete -->
-<datalist id="msfmods"></datalist>
-
-
-<script>
-// MSF module autocomplete: attaches to any input[name=module]
-(function(){
-const inp = document.querySelector('input[name="module"]');
-if(!inp) return;
-inp.setAttribute('list','msfmods');
-let t, last='';
-const fetchMods = async (q) => {
-try {
-const url = `/api/msf/search?q=${encodeURIComponent(q)}`;
-const r = await fetch(url);
-const data = await r.json();
-const dl = document.getElementById('msfmods');
-dl.innerHTML = '';
-(Array.isArray(data)?data:[]).forEach(m=>{
-const o = document.createElement('option');
-o.value = m; dl.appendChild(o);
-});
-} catch(e){}
-};
-inp.addEventListener('input', ()=>{
-const q = inp.value.trim();
-if(q === last) return; last = q;
-clearTimeout(t);
-if(q.length < 3) return;
-t = setTimeout(()=>fetchMods(q), 250);
-});
-})();
-</script>
 </body>
 </html>
