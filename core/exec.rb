@@ -8,7 +8,9 @@ module Hackberry
   module Exec
     module_function
 
-    # ----- dirs / timestamps ---------------------------------------------------
+    TMUX = 'tmux -L hawk' # dedicated tmux server for HAWK
+
+    # ---------- dirs / timestamps ----------
     def ensure_dirs(cfg)
       FileUtils.mkdir_p cfg['paths']['logs']
       FileUtils.mkdir_p cfg['paths']['captures']
@@ -19,61 +21,65 @@ module Hackberry
       Time.now.utc.strftime('%Y%m%d-%H%M%S')
     end
 
-    # ----- shell utilities -----------------------------------------------------
+    # ---------- shell ----------
     def run_capture(cmd)
       stdout, stderr, status = Open3.capture3({'LC_ALL'=>'C'}, cmd)
       { out: stdout, err: stderr, code: status.exitstatus }
     end
 
     def sh_with_env(inner)
-      %(bash -lc 'export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"; #{inner}')
+      %(bash -lc 'export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"; export LC_ALL=C; #{inner}')
     end
 
-    # ----- tmux utilities ------------------------------------------------------
-    # start a tmux session running a command, teeing to a log
+    def touch_log(path)
+      FileUtils.mkdir_p File.dirname(path)
+      FileUtils.touch(path)
+      File.chmod(0644, path) rescue nil
+    end
+
+    # ---------- tmux: start commands ----------
+    # Runs a single command under tmux, teeing output to log. Returns {session:, cmd:, log:}
     def tmux_run(name:, cmd:, log_path:)
       session = "#{name}-#{timestamp}"
-      FileUtils.mkdir_p File.dirname(log_path)
-      full = %(tmux new-session -d -s #{session.shellescape} #{sh_with_env(%Q{"#{cmd.gsub('"','\\"')}" 2>&1 | tee -a #{log_path.shellescape}})})
+      touch_log(log_path)
+
+      # safe single-quote inside single-quoted shell string
+      cmd_sq = cmd.gsub("'", %q('"'"'))
+      inner  = %Q{set -o pipefail; stdbuf -oL -eL '#{cmd_sq}' 2>&1 | tee -a #{Shellwords.escape(log_path)}}
+
+      full = %(#{TMUX} new-session -d -s #{session.shellescape} #{sh_with_env(%Q{"#{inner}"})})
       system(full)
       { session: session, cmd: cmd, log: log_path }
     end
 
-    # run a multi-line script
+    # Runs a multi-line script (we write it to /tmp first)
     def tmux_run_script(name:, content:, log_path:)
       session = "#{name}-#{timestamp}"
-      FileUtils.mkdir_p File.dirname(log_path)
+      touch_log(log_path)
       script  = File.join('/tmp', "hawk_#{name}_#{timestamp}.sh")
       File.write(script, content)
       File.chmod(0755, script)
-      full = %(tmux new-session -d -s #{session.shellescape} #{sh_with_env(%Q{"/bin/bash #{script.shellescape} 2>&1 | tee -a #{log_path.shellescape}"})})
+
+      inner = %Q{set -o pipefail; stdbuf -oL -eL /bin/bash #{script.shellescape} 2>&1 | tee -a #{Shellwords.escape(log_path)}}
+      full  = %(#{TMUX} new-session -d -s #{session.shellescape} #{sh_with_env(%Q{"#{inner}"})})
       system(full)
       { session: session, cmd: "/bin/bash #{script}", log: log_path, script: script }
     end
 
-    # Create an interactive shell and return {session:, pane:}
-    # We use `script -q -c` to guarantee a PTY and visible prompt.
+    # An interactive login shell for the web terminal
     def tmux_new_shell(name: 'tty')
       session = "#{name}-#{timestamp}"
-      start = %(tmux new-session -d -s #{session.shellescape} #{sh_with_env(%Q{"script -q -c 'bash --login -i' /dev/null"})})
+      start = %(#{TMUX} new-session -d -s #{session.shellescape} #{sh_with_env(%Q{"script -q -c 'bash --login -i' /dev/null"})})
       system(start)
-      # find the active pane id
       pane = tmux_active_pane(session)
-      # print a banner so the first snapshot is not empty
       tmux_send_text(session, pane, "echo '[HAWK TTY] #{Time.now.utc}'; pwd; whoami; echo $SHELL")
       tmux_send_key(session, pane, 'Enter')
       { session: session, pane: pane }
     end
 
-    def tmux_active_pane(session)
-      out = run_capture(%(tmux list-panes -F '\#{pane_id}' -t #{session.shellescape}))
-      pid = out[:out].lines.first.to_s.strip
-      pid = '%0' if pid.empty? # fallback (usually 0.0)
-      pid
-    end
-
+    # ---------- tmux: manage ----------
     def tmux_list(prefix: nil)
-      out = run_capture('tmux ls')
+      out = run_capture(%(#{TMUX} ls))
       return [] unless out[:code] == 0
       sessions = out[:out].split("\n").map { |l| l.split(':').first }
       return sessions if prefix.nil? || prefix.empty?
@@ -84,28 +90,37 @@ module Hackberry
       tmux_list.include?(session)
     end
 
+    def tmux_kill(session)
+      run_capture(%(#{TMUX} kill-session -t #{session.shellescape}))
+    end
+
+    def tmux_active_pane(session)
+      out = run_capture(%(#{TMUX} list-panes -F '\#{pane_id}' -t #{session.shellescape}))
+      pid = out[:out].lines.first.to_s.strip
+      pid.empty? ? '%0' : pid
+    end
+
     def tmux_send_key(session, pane, key)
       target = "#{session}:0.0"
       target = "#{session}:#{pane}" if pane && !pane.empty? && pane != '%0'
       case key
-      when 'Enter'   then run_capture(%(tmux send-keys -t #{target.shellescape} Enter))
-      when 'C-c','CTRL_C' then run_capture(%(tmux send-keys -t #{target.shellescape} C-c))
-      when 'Tab'     then run_capture(%(tmux send-keys -t #{target.shellescape} Tab))
-      else
-        run_capture(%(tmux send-keys -t #{target.shellescape} #{key}))
+      when 'Enter','ENTER'      then run_capture(%(#{TMUX} send-keys -t #{target.shellescape} Enter))
+      when 'C-c','CTRL_C'       then run_capture(%(#{TMUX} send-keys -t #{target.shellescape} C-c))
+      when 'Tab','TAB'          then run_capture(%(#{TMUX} send-keys -t #{target.shellescape} Tab))
+      else                           run_capture(%(#{TMUX} send-keys -t #{target.shellescape} #{key}))
       end
     end
 
     def tmux_send_text(session, pane, text)
       target = "#{session}:0.0"
       target = "#{session}:#{pane}" if pane && !pane.empty? && pane != '%0'
-      run_capture(%(tmux send-keys -t #{target.shellescape} -- #{text.shellescape}))
+      run_capture(%(#{TMUX} send-keys -t #{target.shellescape} -- #{text.shellescape}))
     end
 
     def tmux_capture(session, pane)
       target = "#{session}:0.0"
       target = "#{session}:#{pane}" if pane && !pane.empty? && pane != '%0'
-      run_capture(%(tmux capture-pane -p -J -S -2000 -t #{target.shellescape}))
+      run_capture(%(#{TMUX} capture-pane -p -J -S -2000 -t #{target.shellescape}))
     end
 
     def tmux_interrupt(session)
@@ -121,10 +136,6 @@ module Hackberry
       end
     rescue Timeout::Error
       false
-    end
-
-    def tmux_kill(session)
-      run_capture(%(tmux kill-session -t #{session.shellescape}))
     end
   end
 end
