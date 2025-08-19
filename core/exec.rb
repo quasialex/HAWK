@@ -9,17 +9,30 @@ module Hackberry
     def ensure_dirs(cfg)
       FileUtils.mkdir_p cfg['paths']['logs']
       FileUtils.mkdir_p cfg['paths']['captures']
+      FileUtils.mkdir_p cfg['paths']['caplets'] if cfg['paths']['caplets']
     end
 
     def timestamp
       Time.now.utc.strftime('%Y%m%d-%H%M%S')
     end
 
+    # For simple commands
     def tmux_run(name:, cmd:, log_path:)
       session = "#{name}-#{timestamp}"
-      full_cmd = %(tmux new-session -d -s #{session} "bash -lc '#{cmd} |& tee -a #{log_path}'")
+      full_cmd = %(tmux new-session -d -s #{session} "bash -lc '#{cmd} 2>&1 | tee -a #{log_path}'")
       system(full_cmd)
       { session: session, cmd: cmd, log: log_path }
+    end
+
+    # For complex multi-line scripts (avoids quote hell)
+    def tmux_run_script(name:, content:, log_path:)
+      session = "#{name}-#{timestamp}"
+      script  = File.join('/tmp', "hawk_#{name}_#{timestamp}.sh")
+      File.write(script, content)
+      File.chmod(0755, script)
+      full_cmd = %(tmux new-session -d -s #{session} "/bin/bash #{script} 2>&1 | tee -a #{log_path}")
+      system(full_cmd)
+      { session: session, cmd: "/bin/bash #{script}", log: log_path, script: script }
     end
 
     def run_capture(cmd)
@@ -37,16 +50,6 @@ module Hackberry
 
     def tmux_kill(session)
       run_capture("tmux kill-session -t #{session}")
-    end
-    
-    def tmux_run_script(name:, content:, log_path:)
-      session = "#{name}-#{timestamp}"
-       script  = File.join('/tmp', "hawk_#{name}_#{timestamp}.sh")
-       File.write(script, content)
-       File.chmod(0755, script)
-       full_cmd = %(tmux new-session -d -s #{session} "/bin/bash #{script} 2>&1 | tee -a #{log_path}")
-       system(full_cmd)
-       { session: session, cmd: "/bin/bash #{script}", log: log_path, script: script }
     end
   end
 end
