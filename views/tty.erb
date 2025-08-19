@@ -11,7 +11,7 @@
     <button class="pill" onclick="sendKey('TAB')">Tab</button>
   </div>
 
-  <pre id="tty" class="log" style="height:55vh; overflow:auto; white-space:pre-wrap;"></pre>
+  <pre id="tty" class="log" style="height:58vh; overflow:auto; white-space:pre-wrap;"></pre>
 
   <div style="display:flex; gap:8px; margin-top:8px;">
     <input id="cmd" placeholder="Type command…" style="flex:1; padding:12px; border-radius:10px; border:1px solid #2a2f3a; background:#0f131a; color:#e6e6e6;">
@@ -20,9 +20,8 @@
 
   <script src="/tty.js"></script>
   <script>
-    window.TTY_BOOT({ session: "<%= @session %>" });
+    TTY_BOOT({ session: "<%= @session %>" });
   </script>
-
 <% else %>
   <form method="post" action="/tty/new">
     <button type="submit" class="pill">New Shell</button>
