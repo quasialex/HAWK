@@ -16,17 +16,20 @@ module Hackberry
       Time.now.utc.strftime('%Y%m%d-%H%M%S')
     end
 
-    # For simple commands
+    # Simple commands in tmux
     def tmux_run(name:, cmd:, log_path:)
       session = "#{name}-#{timestamp}"
+      FileUtils.mkdir_p File.dirname(log_path)
+      # Pipe both stdout/stderr to tee; keep session alive
       full_cmd = %(tmux new-session -d -s #{session} "bash -lc '#{cmd} 2>&1 | tee -a #{log_path}'")
       system(full_cmd)
       { session: session, cmd: cmd, log: log_path }
     end
 
-    # For complex multi-line scripts (avoids quote hell)
+    # Complex multi-line scripts to avoid quoting issues
     def tmux_run_script(name:, content:, log_path:)
       session = "#{name}-#{timestamp}"
+      FileUtils.mkdir_p File.dirname(log_path)
       script  = File.join('/tmp', "hawk_#{name}_#{timestamp}.sh")
       File.write(script, content)
       File.chmod(0755, script)
@@ -43,9 +46,9 @@ module Hackberry
     def tmux_list(prefix: nil)
       out = run_capture('tmux ls')
       return [] unless out[:code] == 0
-      lines = out[:out].split("\n").map { |l| l.split(':').first }
-      return lines if prefix.nil? || prefix.empty?
-      lines.grep(/^#{Regexp.escape(prefix)}/)
+      sessions = out[:out].split("\n").map { |l| l.split(':').first }
+      return sessions if prefix.nil? || prefix.empty?
+      sessions.grep(/^#{Regexp.escape(prefix)}/)
     end
 
     def tmux_kill(session)
