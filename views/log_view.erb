@@ -1,4 +1,9 @@
+<a class="back" href="/logs">← Logs</a>
 <h2>Log: <%= @file %></h2>
-<pre style="white-space: pre-wrap; font-size: 0.9em; background:#111; color:#0f0; padding:1em;">
-<%= @content && !@content.empty? ? @content : "[No log data]" %>
-</pre>
+
+<% text = (@content || '').to_s %>
+<% if text.empty? %>
+  <p class="muted">No content yet…</p>
+<% else %>
+  <pre class="log"><%= text %></pre>
+<% end %>
