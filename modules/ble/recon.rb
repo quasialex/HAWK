@@ -12,7 +12,7 @@ module Hackberry
 
     def self.actions
       [
-        { id:'scan', label:'BLE Scan', description:'btmon + bluetoothctl scan on',
+        { id:'scan', label:'BLE Scan', description:'btmon + bluetoothctl scan on (30s)',
           inputs:[ {name:'iface', label:'HCI device', type:'text', placeholder:'hci0'} ] }
       ]
     end
@@ -25,16 +25,11 @@ module Hackberry
       base = File.join(cfg['paths']['logs'], "ble-#{Hackberry::Exec.timestamp}")
       log  = "#{base}.log"
 
-      # Use btmon for HCI traffic + bluetoothctl for friendly discovery
       script = <<~BASH
         set -e
         export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
         HCI="#{hci}"
         echo "[*] BLE Recon on $HCI — $(date -u +'%F %T')"
-        if ! command -v btmon >/dev/null 2>&1; then
-          echo "[!] btmon not found (bluez). Install bluez tools."
-          exit 127
-        fi
         hciconfig "$HCI" up || true
         ( btmon ) &
         M=$!
