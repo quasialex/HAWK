@@ -12,26 +12,30 @@ module Hackberry
 
     def self.actions
       [
-        { id:'mon_start', label:'Enable Monitor Mode', description:'airmon-ng start', inputs:[{name:'iface', label:'Wi‑Fi iface', type:'text', placeholder:'wlan0'}] },
-        { id:'mon_stop',  label:'Disable Monitor Mode', description:'airmon-ng stop', inputs:[{name:'iface', label:'Monitor iface', type:'text', placeholder:'wlan0mon'}] },
-        { id:'mac_rand',  label:'Randomize MAC', description:'macchanger -r', inputs:[{name:'iface', label:'Iface', type:'text', placeholder:'wlan0'}] },
-        { id:'psave_off', label:'Power Save OFF', description:'iw set power_save off', inputs:[{name:'iface', label:'Wi‑Fi iface', type:'text', placeholder:'wlan0'}] }
+        { id:'mon_start',  label:'Smart Monitor Mode', description:'Try monitor mode; if unsupported, fall back to recon and explain', inputs:[{name:'iface', label:'Wi-Fi iface', type:'text', placeholder:'wlan0'}] },
+        { id:'mon_stop',   label:'Disable Monitor Mode', description:'airmon-ng stop', inputs:[{name:'iface', label:'Monitor iface', type:'text', placeholder:'wlan0mon'}] },
+        { id:'psave_off',  label:'Power Save OFF', description:'iw set power_save off', inputs:[{name:'iface', label:'Wi-Fi iface', type:'text', placeholder:'wlan0'}] },
+        { id:'restore_net',label:'Restore Networking', description:'Restart NetworkManager & wpa_supplicant', inputs:[] },
+        { id:'caps',       label:'Show Capabilities', description:'Print driver/chip + supported modes', inputs:[{name:'iface', label:'Wi-Fi iface', type:'text', placeholder:'wlan0'}] }
       ]
     end
 
     def self.run(action_id, p, cfg)
-      iface = p['iface'] || cfg['interfaces']['wifi']
       log = File.join(cfg['paths']['logs'], "iface-#{Hackberry::Exec.timestamp}.log")
-      cmd = case action_id
-      when 'mon_start' then "airmon-ng start #{iface}"
-      when 'mon_stop'  then "airmon-ng stop #{iface}"
-      when 'mac_rand'  then "ifconfig #{iface} down && macchanger -r #{iface} && ifconfig #{iface} up"
-      when 'psave_off' then "iw dev #{iface} set power_save off"
-      else raise 'unknown'
-      end
-      Hackberry::Exec.tmux_run(name:'iface', cmd: cmd, log_path: log)
-    end
-  end
-end
-
-Hackberry::Registry.register(Hackberry::IfaceTools)
+      case action_id
+      when 'mon_start'
+        iface = p['iface'].to_s.empty? ? cfg['interfaces']['wifi'] : p['iface']
+        cmd = %Q{bash -lc '
+set -e
+IF="#{iface}"
+echo "[*] HAWK smart monitor: checking $IF"
+DRV="$(ethtool -i "$IF" 2>/dev/null | awk -F": " "/driver:/ {print $2}")"
+PHY="$(iw dev "$IF" info 2>/dev/null | awk "/wiphy/ {print $2}")"
+iw phy "$PHY" info > /tmp/hawk_iwinfo.txt 2>&1 || true
+if grep -q "^\\s\\* monitor" /tmp/hawk_iwinfo.txt; then
+  echo "[+] $IF supports monitor (driver: ${DRV:-unknown})"
+  echo "[*] Killing interfering procs (airmon-ng check kill)"
+  airmon-ng check kill || true
+  echo "[*] Trying: airmon-ng start $IF"
+  if airmon-ng start "$IF"; then
+    echo "[+] airmon-ng start
