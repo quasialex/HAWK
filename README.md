@@ -139,7 +139,6 @@ pipx install --python python3.11 pwncat-csp
 
 ```
 
-```bash
 sudo apt update && sudo apt install -y \
   ruby-full build-essential tmux \
   wifite aircrack-ng hcxdumptool bettercap bluez bluez-hcidump blue-hydra \
