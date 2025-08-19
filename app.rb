@@ -320,7 +320,22 @@ post '/tty/:id/stop' do
 end
 # ==== end PTY Terminal ====
 
-
+# ===== DEBUG: list mounted routes =====
+get '/_routes' do
+  content_type 'text/plain'
+  out = +""
+  self.class.routes.each do |verb, arr|
+    out << "#{verb}\n"
+    arr.each do |r|
+      # r[0] = pattern, r[1] = keys/conditions in modern Sinatra
+      pat = r[0].respond_to?(:source) ? r[0].source : r[0].to_s
+      out << "  #{pat}\n"
+    end
+    out << "\n"
+  end
+  out
+end
+# =====================================
 
   # ===== MSF RPC module picker (autocomplete) =====
   # Safe/optional: requires the 'msfrpc-client' gem and msfrpcd reachable.
