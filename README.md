@@ -16,8 +16,6 @@ Tail logs (live log viewer)
 
 Status/Config (from v0.2)
 
-Start: bundle install && bin/run → http://127.0.0.1:4567 (fullscreen/touch)
-
 ## File Tree
 
 ```bash
