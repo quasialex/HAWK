@@ -156,5 +156,7 @@ sudo gem install msfrpc-client
 bundle config set --local path 'vendor/bundle'
 bundle install
 
-sudo ./hawk
+sudo cp systemd/hawk.service /etc/systemd/system/hawk.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now hawk
 ```
