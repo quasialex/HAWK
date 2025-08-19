@@ -1,0 +1,39 @@
+<a class="back" href="/">← Home</a>
+<h2>Bettercap Caplets</h2>
+<form class="form" method="post" action="/caplets/new">
+<div class="inputs">
+<label><span>New caplet name</span><input name="name" placeholder="my_attack"></label>
+</div>
+<button type="submit">Create</button>
+</form>
+
+
+<% if @caps.any? %>
+<div class="form">
+<h3>Existing</h3>
+<ul class="sessions">
+<% @caps.each do |c| %>
+<li>
+<code><%= c %></code>
+<a class="pill small" href="/caplets?edit=<%= c %>">Edit</a>
+<form style="display:inline" method="post" action="/caplets/run">
+<input type="hidden" name="file" value="<%= c %>">
+<button type="submit">Run</button>
+</form>
+</li>
+<% end %>
+</ul>
+</div>
+<% end %>
+
+
+<% if params['edit'] %>
+<div class="form">
+<h3>Edit: <%= params['edit'] %></h3>
+<form method="post" action="/caplets/save">
+<input type="hidden" name="file" value="<%= params['edit'] %>">
+<textarea name="content" rows="16" style="width:100%"><%= File.read(File.join(@cfg['paths']['caplets'], params['edit'])) rescue '' %></textarea>
+<button type="submit">Save</button>
+</form>
+</div>
+<% end %>
