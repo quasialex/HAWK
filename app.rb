@@ -268,6 +268,75 @@ class HackberryApp < Sinatra::Base
     redirect "/tasks?session=#{res[:session]}"
   end
 
+  # ======= TTY: Interactive terminal (pane-aware, polling) =======
+# routes live inside HackberryApp so they register even without extra requires
+get '/tty' do
+  @sessions = Hackberry::Exec.tmux_list
+  erb :tty
+end
+
+post '/tty/new' do
+  s = Hackberry::Exec.tmux_new_shell(name: 'tty')   # returns {session:, pane:}
+  redirect "/tty/#{s[:session]}"
+end
+
+get '/tty/:session' do
+  @session = params[:session]
+  halt 404, "No such session" unless Hackberry::Exec.tmux_list.include?(@session)
+  erb :tty
+end
+
+# Return full pane text (last ~2000 lines) so the browser can poll
+get '/tty/:session/snap' do
+  content_type 'text/plain'
+  s = params[:session]
+  halt 404 unless Hackberry::Exec.tmux_list.include?(s)
+  pane = Hackberry::Exec.tmux_active_pane(s)
+  cap  = Hackberry::Exec.tmux_capture(s, pane)
+  cap[:code] == 0 ? cap[:out] : "ERROR capture(code=#{cap[:code]}): #{cap[:err]}".strip
+end
+
+# Send text or special keys
+post '/tty/:session/send' do
+  s = params[:session]
+  halt 404 unless Hackberry::Exec.tmux_list.include?(s)
+  pane = Hackberry::Exec.tmux_active_pane(s)
+
+  key  = params['key'].to_s
+  text = params['text'].to_s
+
+  if !text.empty?
+    Hackberry::Exec.tmux_send_text(s, pane, text)
+    Hackberry::Exec.tmux_send_key(s, pane, 'Enter')
+  else
+    case key
+    when 'ENTER'   then Hackberry::Exec.tmux_send_key(s, pane, 'Enter')
+    when 'CTRL_C'  then Hackberry::Exec.tmux_send_key(s, pane, 'C-c')
+    when 'TAB'     then Hackberry::Exec.tmux_send_key(s, pane, 'Tab')
+    end
+  end
+  status 204
+end
+
+# Graceful stop (Ctrl‑C → wait → kill)
+post '/tty/:session/stop' do
+  s = params[:session]
+  Hackberry::Exec.tmux_interrupt(s)
+  Hackberry::Exec.tmux_wait_dead(s, timeout_s: 3)
+  Hackberry::Exec.tmux_kill(s) if Hackberry::Exec.tmux_alive?(s)
+  redirect '/tty'
+end
+
+# Quick diagnostics
+get '/diag' do
+  content_type 'text/plain'
+  paths = ENV['PATH']
+  tmux  = `which tmux 2>/dev/null`.strip
+  "PATH=#{paths}\nwhich tmux=#{tmux}\nTmux sessions: #{Hackberry::Exec.tmux_list.join(', ')}\n"
+end
+# ======= end TTY =======
+
+
   # ===== MSF RPC module picker (autocomplete) =====
   # Safe/optional: requires the 'msfrpc-client' gem and msfrpcd reachable.
   # GET /api/msf/search?q=ssh&host=127.0.0.1&port=55553&user=msf&pass=msf
