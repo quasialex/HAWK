@@ -3,14 +3,14 @@ require 'yaml'
 require 'json'
 require 'sinatra/base'
 require 'sinatra/json'
-require 'sinatra/streaming'   # + live SSE
+require 'sinatra/streaming'
 require_relative 'core/exec'
 require_relative 'core/module_base'
 require_relative 'core/registry'
 require_relative 'core/ui_helpers'
 require_relative 'core/ifaces'
 require_relative 'core/profiles'
-require_relative 'core/tasks'  # + tasks index (data/tasks.json)
+require_relative 'core/tasks'
 
 # Autoload modules
 Dir[File.join(__dir__, 'modules', '**', '*.rb')].sort.each { |f| require f }
@@ -34,7 +34,7 @@ class HackberryApp < Sinatra::Base
 
   before { Hackberry::Exec.ensure_dirs(CONFIG) }
 
-  # ===== Home & Categories =====
+  # ===== Home / Categories =====
   get '/' do
     @by_cat = Hackberry::Registry.by_category
     erb :index
@@ -47,11 +47,10 @@ class HackberryApp < Sinatra::Base
     erb :category
   end
 
-  # ===== Module page (with autodetect + profiles + running sessions for STOP) =====
+  # ===== Module page (autodetect + profiles + show live sessions for that module) =====
   get '/module/:id' do
     @mod = Hackberry::Registry.find(params[:id]) or halt 404
 
-    # deep dup + inject dropdowns + profile defaults
     @actions = Marshal.load(Marshal.dump(@mod.actions))
     wifi = Hackberry::Ifaces.names(Hackberry::Ifaces.wifi)
     wmon = Hackberry::Ifaces.names(Hackberry::Ifaces.wifi_mon)
@@ -61,10 +60,9 @@ class HackberryApp < Sinatra::Base
     @actions.each do |a|
       last = PROFILES.get(@mod.id, a[:id])
       a[:inputs].each do |i|
-        # last-used defaults
         i[:default] = last[i[:name]] if last[i[:name]] && (i[:default].nil? || i[:default].to_s.empty?)
-        # infer dropdowns
-        name = i[:name]; ph = (i[:placeholder] || '').downcase
+        ph   = (i[:placeholder] || '').downcase
+        name = i[:name]
         if (name =~ /iface/ && ph.include?('wlan')) || name == 'iface_wifi'
           i[:type] = 'select'; i[:options] = wifi
         elsif (name =~ /iface/ && ph.include?('mon')) || name == 'iface_mon'
@@ -74,19 +72,21 @@ class HackberryApp < Sinatra::Base
         elsif ph.include?('hci') || name == 'iface_ble'
           i[:type] = 'select'; i[:options] = ble
         end
+        if i[:type] == 'select'
+          i[:options] ||= []
+          i[:default] ||= i[:options].first
+        end
       end
     end
 
-    # show running sessions for this module (from TASKS index)
-    @running = Hackberry::Exec.tmux_list(prefix: nil).filter_map { |s|
-      t = TASKS.find(s)
-      t if t && t['module_id'] == @mod.id
-    }
+    alive = Hackberry::Exec.tmux_list
+    TASKS.prune!(alive)
+    @running = TASKS.running(alive).select { |t| t['module_id'] == @mod.id }
 
     erb :module
   end
 
-  # ===== Run action -> record a TASK -> redirect to Tasks (Live) =====
+  # ===== Run action -> record live TASK and redirect to Tasks =====
   post '/run/:id/:action' do
     mod = Hackberry::Registry.find(params[:id]) or halt 404
     action_id = params[:action]
@@ -108,27 +108,29 @@ class HackberryApp < Sinatra::Base
       })
       redirect "/tasks?session=#{result[:session]}"
     else
-      # fallback to the old run page if a module returns no session
       @result = result
       erb :run
     end
   end
 
-  # ===== Status (raw tmux list/kill) =====
+  # ===== Status =====
   get '/status' do
     @sessions = Hackberry::Exec.tmux_list
     erb :status
   end
 
   delete '/status/:session' do
-    Hackberry::Exec.tmux_kill(params[:session])
-    TASKS.update_status!(params[:session], 'stopped')
+    s = params[:session]
+    Hackberry::Exec.tmux_kill(s)
+    TASKS.remove(s)
     redirect '/status'
   end
 
-  # ===== Tasks manager (preview/live/stop) =====
+  # ===== Tasks (only live) =====
   get '/tasks' do
-    @tasks     = TASKS.all
+    alive = Hackberry::Exec.tmux_list
+    TASKS.prune!(alive)
+    @tasks     = TASKS.running(alive)
     @highlight = params['session']
     @mods_map  = Hash[Hackberry::Registry.mods.map { |m| [m.id, m] }]
     erb :tasks
@@ -137,17 +139,21 @@ class HackberryApp < Sinatra::Base
   post '/tasks/:session/stop' do
     s = params[:session]
     Hackberry::Exec.tmux_kill(s)
-    TASKS.update_status!(s, 'stopped')
+    TASKS.remove(s)
     redirect '/tasks'
   end
 
-  # ===== Logs =====
+  # ===== Logs (clickable list) =====
   get '/logs' do
-    @logs = Dir.glob(File.join(CONFIG['paths']['logs'], '*.log')).sort.reverse
-    erb :run
+    dir   = CONFIG['paths']['logs']
+    paths = Dir.glob(File.join(dir, '*.log'))
+    @log_entries = paths.map { |p|
+      { file: File.basename(p), mtime: File.mtime(p), size: File.size(p) }
+    }.sort_by { |h| h[:mtime] }.reverse
+    erb :logs
   end
 
-  # Simple preview (existing behavior)
+  # Simple preview (last 200 lines)
   get '/log' do
     file = params['file'] or halt 400
     path = File.join(CONFIG['paths']['logs'], File.basename(file))
@@ -208,11 +214,11 @@ class HackberryApp < Sinatra::Base
     redirect '/config'
   end
 
-  # ===== Bettercap Caplets (editor + runner) =====
+  # ===== Caplets (optional editor/run — keep if you already added it) =====
   get '/caplets' do
     dir = CONFIG['paths']['caplets']
     Dir.mkdir(dir) unless Dir.exist?(dir)
-    @cfg  = CONFIG  # for editor template that reads file
+    @cfg  = CONFIG
     @caps = Dir.glob(File.join(dir, '*.cap')).map { |p| File.basename(p) }
     erb :caplets
   end
@@ -250,25 +256,6 @@ class HackberryApp < Sinatra::Base
       'status'    => 'running'
     })
     redirect "/tasks?session=#{res[:session]}"
-  end
-
-  # ===== MSF RPC module search (autocomplete) =====
-  get '/api/msf/search' do
-    begin
-      require 'msfrpc-client'
-      host = params['host'] || '127.0.0.1'
-      port = (params['port'] || '55553').to_i
-      user = params['user'] || 'msf'
-      pass = params['pass'] || 'msf'
-      q    = params['q']    || ''
-      c = Msf::RPC::Client.new(host: host, port: port, ssl: false)
-      c.login(user, pass)
-      res = c.call('module.search', q)
-      json res.map { |m| m['fullname'] }[0, 50]
-    rescue => e
-      status 500
-      json({ error: e.message })
-    end
   end
 end
 
