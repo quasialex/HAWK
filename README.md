@@ -99,10 +99,7 @@ cd evilginx2
 make
 
 # Move binary into PATH
-sudo mv bin/evilginx /usr/local/bin/
-
-# Test
-evilginx -h
+sudo mv build/evilginx /usr/local/bin
 
 ```
 
