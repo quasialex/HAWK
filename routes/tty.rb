@@ -1,25 +1,17 @@
 # routes/tty.rb
-require 'sinatra/streaming'
+require 'shellwords'
 require_relative '../core/exec'
 
 class HackberryApp < Sinatra::Base
-  helpers Sinatra::Streaming
-
-  # TTY landing: list tmux sessions and quick "new shell" button
+  # List sessions / create new shell
   get '/tty' do
     @sessions = Hackberry::Exec.tmux_list
     erb :tty
   end
 
-  # Create a fresh interactive shell session in tmux
   post '/tty/new' do
-    base = "tty"
-    session = "#{base}-#{Hackberry::Exec.timestamp}"
-    log = File.join(HackberryApp::CONFIG['paths']['logs'], "tty-#{Hackberry::Exec.timestamp}.log")
-    # Start an interactive login shell; use a plain pane we can send keys to
-    cmd = "script -q -c bash /dev/null"
-    Hackberry::Exec.tmux_run(name: session, cmd: cmd, log_path: log)
-    redirect "/tty/#{session}"
+    s = Hackberry::Exec.tmux_new_shell(name: 'tty')
+    redirect "/tty/#{s}"
   end
 
   # Terminal page
@@ -29,56 +21,36 @@ class HackberryApp < Sinatra::Base
     erb :tty
   end
 
-  # SSE stream of pane contents (simple polling of capture-pane)
-  get '/tty/:session/stream' do
-    content_type 'text/event-stream'
-    session = params[:session]
-    halt 404 unless Hackberry::Exec.tmux_list.include?(session)
-
-    last = ""
-    stream(:keep_open) do |out|
-      begin
-        loop do
-          # Capture last 2000 characters with join-lines (-J)
-          cap = `tmux capture-pane -p -J -t "#{session}:0.0" -S -2000 2>/dev/null`
-          if cap && cap != last
-            # Send only the delta to cut bandwidth
-            delta = cap[last.length..-1] || cap
-            out << "data: #{delta.gsub(/\r?\n/, "\n")}\n\n"
-            last = cap
-          end
-          sleep 0.5
-        end
-      rescue => e
-        out << "event: error\n" << "data: #{e.class}: #{e.message}\n\n"
-      ensure
-        out.close
-      end
-    end
+  # Simple polling snapshot (entire pane content)
+  get '/tty/:session/snap' do
+    content_type 'text/plain'
+    s = params[:session]
+    halt 404 unless Hackberry::Exec.tmux_list.include?(s)
+    `tmux capture-pane -p -J -S -2000 -t #{Shellwords.escape(s)}:0.0 2>/dev/null` || ""
   end
 
-  # Send keys / text to the tmux pane
+  # Send text/keys
   post '/tty/:session/send' do
     s = params[:session]
     halt 404 unless Hackberry::Exec.tmux_list.include?(s)
 
-    key = params['key'].to_s
+    key  = params['key'].to_s
     text = params['text'].to_s
 
     if !text.empty?
-      system(%(tmux send-keys -t "#{s}:0.0" -- #{text.shellescape}))
-    elsif key == 'ENTER'
-      system(%(tmux send-keys -t "#{s}:0.0" Enter))
-    elsif key == 'CTRL_C'
-      Hackberry::Exec.tmux_interrupt(s)
-    elsif key == 'TAB'
-      system(%(tmux send-keys -t "#{s}:0.0" Tab))
+      system(%(tmux send-keys -t #{Shellwords.escape(s)}:0.0 -- #{text.shellescape}))
+      system(%(tmux send-keys -t #{Shellwords.escape(s)}:0.0 Enter))
+    else
+      case key
+      when 'ENTER'  then system(%(tmux send-keys -t #{Shellwords.escape(s)}:0.0 Enter))
+      when 'CTRL_C' then Hackberry::Exec.tmux_interrupt(s)
+      when 'TAB'    then system(%(tmux send-keys -t #{Shellwords.escape(s)}:0.0 Tab))
+      end
     end
-
     status 204
   end
 
-  # Kill the tty session (Ctrl‑C + kill fallback)
+  # Stop the terminal session (Ctrl‑C → kill)
   post '/tty/:session/stop' do
     s = params[:session]
     Hackberry::Exec.tmux_interrupt(s)
