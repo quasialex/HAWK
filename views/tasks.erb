@@ -12,9 +12,10 @@
           <div class="muted">Session <code><%= t['session'] %></code> • <%= t['started'] %></div>
           <div class="muted">CMD: <code><%= t['cmd'] %></code></div>
         </div>
-        <div class="actions">
+        <div class="actions" style="display:flex; gap:8px;">
           <a class="pill" href="/log?file=<%= File.basename(t['log']) %>">Preview</a>
-          <a class="pill" href="/stream?session=<%= t['session'] %>">Live</a>
+          <a class="pill" href="/stream?log=<%= File.basename(t['log']) %>">Live</a>
+          <a class="pill" href="/tty/<%= t['session'] %>">Terminal</a>
           <form method="post" action="/tasks/<%= t['session'] %>/stop">
             <button class="danger" type="submit">Stop</button>
           </form>
