@@ -1,0 +1,40 @@
+<a class="back" href="/">← Home</a>
+<h2>Interactive Terminal</h2>
+
+<% if @session %>
+  <div class="controls" style="display:flex; gap:10px; margin:10px 0;">
+    <form method="post" action="/tty/<%= @session %>/stop" onsubmit="return confirm('Stop this terminal?');">
+      <button class="danger" type="submit">Stop</button>
+    </form>
+    <button class="pill" onclick="sendKey('CTRL_C')">Ctrl‑C</button>
+    <button class="pill" onclick="sendKey('ENTER')">Enter</button>
+    <button class="pill" onclick="sendKey('TAB')">Tab</button>
+  </div>
+
+  <pre id="tty" class="log" style="height:55vh; overflow:auto; white-space:pre-wrap;"></pre>
+
+  <div style="display:flex; gap:8px; margin-top:8px;">
+    <input id="cmd" placeholder="Type command…" style="flex:1; padding:12px; border-radius:10px; border:1px solid #2a2f3a; background:#0f131a; color:#e6e6e6;">
+    <button onclick="sendText()" class="pill">Send</button>
+  </div>
+
+  <script src="/tty.js"></script>
+  <script>
+    window.TTY_BOOT({ session: "<%= @session %>" });
+  </script>
+
+<% else %>
+  <form method="post" action="/tty/new">
+    <button type="submit" class="pill">New Shell</button>
+  </form>
+
+  <h3>Existing tmux sessions</h3>
+  <ul class="sessions">
+    <% @sessions.each do |s| %>
+      <li>
+        <code><%= s %></code>
+        <a class="pill" href="/tty/<%= s %>">Open</a>
+      </li>
+    <% end %>
+  </ul>
+<% end %>
