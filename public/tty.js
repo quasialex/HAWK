@@ -1,44 +1,45 @@
 (function(){
-  function esc(s){ return s.replace(/[&<>]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c])); }
+  function $(id){ return document.getElementById(id); }
 
   window.TTY_BOOT = function(opts){
     const sess = opts.session;
-    const pre  = document.getElementById('tty');
-    const cmd  = document.getElementById('cmd');
+    const pre  = $('tty');
+    const box  = $('cmd');
 
-    const es = new EventSource(`/tty/${encodeURIComponent(sess)}/stream`);
-    es.onmessage = (e)=>{
-      pre.textContent += e.data + "\n";
-      pre.scrollTop = pre.scrollHeight;
-    };
-    es.onerror = ()=>{ /* keep quiet; tmux may end */ };
+    async function snap(){
+      try{
+        const res = await fetch(`/tty/${encodeURIComponent(sess)}/snap`, {cache:'no-store'});
+        if(!res.ok) return;
+        const txt = await res.text();
+        pre.textContent = txt;
+        pre.scrollTop = pre.scrollHeight;
+      }catch(e){}
+    }
+    setInterval(snap, 500);
+    snap();
 
     window.sendKey = async function(key){
       await fetch(`/tty/${encodeURIComponent(sess)}/send`, {
         method:'POST',
         headers:{'Content-Type':'application/x-www-form-urlencoded'},
-        body: `key=${encodeURIComponent(key)}`
+        body:`key=${encodeURIComponent(key)}`
       });
+      setTimeout(snap, 120);
     };
 
     window.sendText = async function(){
-      const t = cmd.value;
+      const t = box.value;
       if(!t) return;
-      // send the text then an Enter
       await fetch(`/tty/${encodeURIComponent(sess)}/send`, {
         method:'POST',
         headers:{'Content-Type':'application/x-www-form-urlencoded'},
-        body: `text=${encodeURIComponent(t)}`
+        body:`text=${encodeURIComponent(t)}`
       });
-      await fetch(`/tty/${encodeURIComponent(sess)}/send`, {
-        method:'POST',
-        headers:{'Content-Type':'application/x-www-form-urlencoded'},
-        body: `key=ENTER`
-      });
-      cmd.value = '';
+      box.value = '';
+      setTimeout(snap, 150);
     };
 
-    cmd.addEventListener('keydown', (e)=>{
+    box.addEventListener('keydown', (e)=>{
       if(e.key === 'Enter'){
         e.preventDefault();
         window.sendText();
