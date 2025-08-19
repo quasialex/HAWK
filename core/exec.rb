@@ -29,7 +29,7 @@ module Hackberry
       sessions.grep(/^#{Regexp.escape(prefix)}/)
     end
 
-    # simple one-liner commands
+    # Simple one-liner commands
     def tmux_run(name:, cmd:, log_path:)
       session = "#{name}-#{timestamp}"
       FileUtils.mkdir_p File.dirname(log_path)
@@ -38,7 +38,7 @@ module Hackberry
       { session: session, cmd: cmd, log: log_path }
     end
 
-    # multi-line scripts (avoids quoting issues)
+    # Multi-line scripts (avoids quoting hell)
     def tmux_run_script(name:, content:, log_path:)
       session = "#{name}-#{timestamp}"
       FileUtils.mkdir_p File.dirname(log_path)
