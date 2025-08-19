@@ -110,14 +110,34 @@ Needs a public VPS + domain for real-world phishing; local use limited.
 ### 📌 pwncat-cs (post-exploitation / C2-ish tool)
 
 ```bash
-# Dependencies
-sudo apt install -y python3 python3-pip python3-distutils-extrapip
+---
 
-# Install via pipx (recommended for isolation)
-python3 -m pipx ensurepath
+### Build Python 3.11 from source
 
-# Install pwncat-cs
-pipx install git+https://github.com/calebstewart/pwncat.git
+This is more universal, just takes \~15–20 minutes on ARM:
+
+```bash
+sudo apt install -y build-essential libssl-dev zlib1g-dev \
+  libncurses5-dev libncursesw5-dev libreadline-dev libsqlite3-dev \
+  libgdbm-dev libdb5.3-dev libbz2-dev libexpat1-dev liblzma-dev tk-dev
+
+cd /usr/src
+sudo wget https://www.python.org/ftp/python/3.11.9/Python-3.11.9.tgz
+sudo tar xzf Python-3.11.9.tgz
+cd Python-3.11.9
+sudo ./configure --enable-optimizations
+sudo make -j$(nproc)
+sudo make altinstall
+```
+
+This installs `python3.11` alongside 3.13 without breaking the system.
+
+Then you can do:
+
+```bash
+pipx install --python python3.11 pwncat-csp
+```
+---
 
 ```
 
