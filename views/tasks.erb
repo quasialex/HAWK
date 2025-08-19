@@ -1,24 +1,36 @@
 <a class="back" href="/">← Home</a>
 <h2>Tasks</h2>
+
+<div class="controls">
+  <label class="pill"><input id="autoref" type="checkbox" checked /> Auto-refresh</label>
+</div>
+
 <% if @tasks.empty? %>
-<p class="muted">No tasks yet.</p>
+  <p class="muted">No tasks yet.</p>
 <% else %>
-<ul class="tasks">
-<% @tasks.reverse.each do |t| %>
-<li class="task <%= 'hl' if @highlight == t['session'] %>">
-<div>
-<div class="title"><%= @mods_map[t['module_id']]&.label || t['module_id'] %> — <code><%= t['action'] %></code></div>
-<div class="muted">Session <code><%= t['session'] %></code> • <%= t['started'] %></div>
-<div class="muted">CMD: <code><%= t['cmd'] %></code></div>
-</div>
-<div class="actions">
-<a class="pill" href="/log?file=<%= File.basename(t['log']) %>">Preview</a>
-<a class="pill" href="/stream?session=<%= t['session'] %>">Live</a>
-<form method="post" action="/tasks/<%= t['session'] %>/stop">
-<button class="danger" type="submit">Stop</button>
-</form>
-</div>
-</li>
+  <ul class="tasks">
+    <% @tasks.reverse.each do |t| %>
+      <li class="task <%= 'hl' if @highlight == t['session'] %>">
+        <div>
+          <div class="title"><%= @mods_map[t['module_id']]&.label || t['module_id'] %> — <code><%= t['action'] %></code></div>
+          <div class="muted">Session <code><%= t['session'] %></code> • <%= t['started'] %></div>
+          <div class="muted">CMD: <code><%= t['cmd'] %></code></div>
+        </div>
+        <div class="actions">
+          <a class="pill" href="/log?file=<%= File.basename(t['log']) %>">Preview</a>
+          <a class="pill" href="/stream?session=<%= t['session'] %>">Live</a>
+          <form method="post" action="/tasks/<%= t['session'] %>/stop">
+            <button class="danger" type="submit">Stop</button>
+          </form>
+        </div>
+      </li>
+    <% end %>
+  </ul>
 <% end %>
-</ul>
-<% end %>
+
+<script>
+  (function(){
+    const chk = document.getElementById('autoref');
+    setInterval(function(){ if (chk && chk.checked) location.reload(); }, 4000);
+  })();
+</script>
