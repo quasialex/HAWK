@@ -1,6 +1,11 @@
 <a class="back" href="/logs">← Logs</a>
 <h2>Log: <%= @file %></h2>
 
+<div style="display:flex; gap:10px; margin-bottom:10px;">
+  <a class="pill" href="/stream?log=<%= @file %>">Live</a>
+  <a class="pill" href="/log?file=<%= @file %>">Refresh</a>
+</div>
+
 <% text = (@content || '').to_s %>
 <% if text.empty? %>
   <p class="muted">No content yet…</p>
