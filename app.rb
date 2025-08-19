@@ -22,7 +22,7 @@ class HackberryApp < Sinatra::Base
   set :bind, '0.0.0.0'
   set :port, 4567
   set :public_folder, File.expand_path('public', __dir__)
-  set :views, File.expand_path('views', __dir__)
+  set :views,         File.expand_path('views',  __dir__)
   enable :method_override
 
   helpers { include Hackberry::UIHelpers }
@@ -33,6 +33,11 @@ class HackberryApp < Sinatra::Base
   TASKS    = Hackberry::Tasks.new(File.join(__dir__, 'data', 'tasks.json'))
 
   before { Hackberry::Exec.ensure_dirs(CONFIG) }
+
+  # ===== Health (quick ping) =====
+  get '/health' do
+    json ok: true, time: Time.now.utc.iso8601
+  end
 
   # ===== Home =====
   get '/' do
@@ -48,7 +53,7 @@ class HackberryApp < Sinatra::Base
     erb :category
   end
 
-  # ===== Module page (autodetect+profiles+running) =====
+  # ===== Module page (autodetect + profiles + show live sessions for that module) =====
   get '/module/:id' do
     @mod = Hackberry::Registry.find(params[:id]) or halt 404
 
@@ -63,6 +68,7 @@ class HackberryApp < Sinatra::Base
       last = PROFILES.get(@mod.id, a[:id])
       a[:inputs].each do |i|
         i[:default] = last[i[:name]] if last[i[:name]] && (i[:default].nil? || i[:default].to_s.empty?)
+
         name = i[:name]; ph = (i[:placeholder] || '').downcase
         if (name =~ /iface/ && ph.include?('wlan')) || name == 'iface_wifi'
           i[:type] = 'select'; i[:options] = wifi
@@ -83,10 +89,11 @@ class HackberryApp < Sinatra::Base
     alive = Hackberry::Exec.tmux_list
     TASKS.prune!(alive)
     @running = TASKS.running(alive).select { |t| t['module_id'] == @mod.id }
+
     erb :module
   end
 
-  # ===== Run action -> record live task -> redirect to Tasks =====
+  # ===== Run action -> record live TASK and redirect to Tasks (if session) =====
   post '/run/:id/:action' do
     mod = Hackberry::Registry.find(params[:id]) or halt 404
     action_id = params[:action]
@@ -113,7 +120,7 @@ class HackberryApp < Sinatra::Base
     end
   end
 
-  # ===== Status =====
+  # ===== Status (raw tmux) =====
   get '/status' do
     @sessions = Hackberry::Exec.tmux_list
     erb :status
@@ -126,7 +133,7 @@ class HackberryApp < Sinatra::Base
     redirect '/status'
   end
 
-  # ===== Tasks (live only) =====
+  # ===== Tasks (only live) =====
   get '/tasks' do
     alive = Hackberry::Exec.tmux_list
     TASKS.prune!(alive)
@@ -143,7 +150,7 @@ class HackberryApp < Sinatra::Base
     redirect '/tasks'
   end
 
-  # ===== Logs (clickable) =====
+  # ===== Logs (clickable list) =====
   get '/logs' do
     dir   = CONFIG['paths']['logs']
     FileUtils.mkdir_p(dir)
@@ -154,17 +161,17 @@ class HackberryApp < Sinatra::Base
     erb :logs
   end
 
-  # Preview last 200 lines
+  # Preview last 200 lines (robust)
   get '/log' do
     file = params['file'] or halt 400
     path = File.join(CONFIG['paths']['logs'], File.basename(file))
     halt 404, 'log not found' unless File.exist?(path)
-    @file = File.basename(path)
-    @content = File.readlines(path).last(200).join rescue ''
+    @file    = File.basename(path)
+    @content = (File.readlines(path).last(200).join rescue '')
     erb :log_view
   end
 
-  # Live SSE tail
+  # Live SSE stream (by session OR by file)
   get '/stream' do
     content_type 'text/event-stream'
     log = params['log']
@@ -257,6 +264,33 @@ class HackberryApp < Sinatra::Base
       'status'    => 'running'
     })
     redirect "/tasks?session=#{res[:session]}"
+  end
+
+  # ===== MSF RPC module picker (autocomplete) =====
+  # Safe/optional: requires the 'msfrpc-client' gem and msfrpcd reachable.
+  # GET /api/msf/search?q=ssh&host=127.0.0.1&port=55553&user=msf&pass=msf
+  get '/api/msf/search' do
+    q    = (params['q'] || '').to_s
+    host = (params['host'] || '127.0.0.1').to_s
+    port = (params['port'] || '55553').to_i
+    user = (params['user'] || 'msf').to_s
+    pass = (params['pass'] || 'msf').to_s
+
+    begin
+      begin
+        require 'msfrpc-client'
+      rescue LoadError
+        halt 503, json(error: "msfrpc-client gem not installed")
+      end
+
+      c = Msf::RPC::Client.new(host: host, port: port, ssl: false)
+      c.login(user, pass)
+      res = c.call('module.search', q)
+      json res.map { |m| m['fullname'] }[0, 50]
+    rescue => e
+      status 500
+      json(error: e.message)
+    end
   end
 end
 
