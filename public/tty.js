@@ -9,16 +9,11 @@
     async function snap(){
       try{
         const res = await fetch(`/tty/${encodeURIComponent(sess)}/snap`, {cache:'no-store'});
-        if(!res.ok){
-          pre.textContent = `ERROR: ${res.status} ${res.statusText}`;
-          return;
-        }
+        if(!res.ok){ pre.textContent = `ERROR: ${res.status} ${res.statusText}`; return; }
         const txt = await res.text();
         pre.textContent = txt || "[no output yet]";
         pre.scrollTop = pre.scrollHeight;
-      }catch(e){
-        pre.textContent = "ERROR: " + (e && e.message ? e.message : e);
-      }
+      }catch(e){ pre.textContent = "ERROR: " + (e && e.message ? e.message : e); }
     }
     setInterval(snap, 600);
     snap();
@@ -45,10 +40,7 @@
     };
 
     box.addEventListener('keydown', (e)=>{
-      if(e.key === 'Enter'){
-        e.preventDefault();
-        window.sendText();
-      }
+      if(e.key === 'Enter'){ e.preventDefault(); window.sendText(); }
     });
   };
 })();
