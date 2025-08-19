@@ -27,19 +27,8 @@ module Hackberry
       rec
     end
 
-    def all
-      @data
-    end
-
     def find(session)
       @data.find { |t| t['session'] == session }
-    end
-
-    def update_status!(session, status)
-      if (t = find(session))
-        t['status'] = status
-        save
-      end
     end
 
     def remove(session)
@@ -47,7 +36,6 @@ module Hackberry
       save
     end
 
-    # Keep only running tasks that still exist in tmux
     def prune!(alive_sessions)
       before = @data.length
       @data.select! { |t| t['status'] == 'running' && alive_sessions.include?(t['session']) }
