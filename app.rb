@@ -1,9 +1,11 @@
 # app.rb
 require 'yaml'
 require 'json'
+require 'time'
 require 'sinatra/base'
 require 'sinatra/json'
 require 'sinatra/streaming'
+
 require_relative 'core/exec'
 require_relative 'core/module_base'
 require_relative 'core/registry'
@@ -23,9 +25,7 @@ class HackberryApp < Sinatra::Base
   set :views, File.expand_path('views', __dir__)
   enable :method_override
 
-  helpers do
-    include Hackberry::UIHelpers
-  end
+  helpers { include Hackberry::UIHelpers }
 
   CONFIG_PATH = File.join(__dir__, 'config', 'config.yml')
   CONFIG   = YAML.load_file(CONFIG_PATH)['defaults']
@@ -34,12 +34,13 @@ class HackberryApp < Sinatra::Base
 
   before { Hackberry::Exec.ensure_dirs(CONFIG) }
 
-  # ===== Home / Categories =====
+  # ===== Home =====
   get '/' do
     @by_cat = Hackberry::Registry.by_category
     erb :index
   end
 
+  # ===== Category =====
   get '/category/:cat' do
     @cat = params[:cat].to_sym
     @mods = Hackberry::Registry.mods.select { |m| m.category == @cat }
@@ -47,10 +48,11 @@ class HackberryApp < Sinatra::Base
     erb :category
   end
 
-  # ===== Module page (autodetect + profiles + show live sessions for that module) =====
+  # ===== Module page (autodetect+profiles+running) =====
   get '/module/:id' do
     @mod = Hackberry::Registry.find(params[:id]) or halt 404
 
+    # deep dup actions and inject dropdowns + profile defaults
     @actions = Marshal.load(Marshal.dump(@mod.actions))
     wifi = Hackberry::Ifaces.names(Hackberry::Ifaces.wifi)
     wmon = Hackberry::Ifaces.names(Hackberry::Ifaces.wifi_mon)
@@ -61,8 +63,7 @@ class HackberryApp < Sinatra::Base
       last = PROFILES.get(@mod.id, a[:id])
       a[:inputs].each do |i|
         i[:default] = last[i[:name]] if last[i[:name]] && (i[:default].nil? || i[:default].to_s.empty?)
-        ph   = (i[:placeholder] || '').downcase
-        name = i[:name]
+        name = i[:name]; ph = (i[:placeholder] || '').downcase
         if (name =~ /iface/ && ph.include?('wlan')) || name == 'iface_wifi'
           i[:type] = 'select'; i[:options] = wifi
         elsif (name =~ /iface/ && ph.include?('mon')) || name == 'iface_mon'
@@ -82,11 +83,10 @@ class HackberryApp < Sinatra::Base
     alive = Hackberry::Exec.tmux_list
     TASKS.prune!(alive)
     @running = TASKS.running(alive).select { |t| t['module_id'] == @mod.id }
-
     erb :module
   end
 
-  # ===== Run action -> record live TASK and redirect to Tasks =====
+  # ===== Run action -> record live task -> redirect to Tasks =====
   post '/run/:id/:action' do
     mod = Hackberry::Registry.find(params[:id]) or halt 404
     action_id = params[:action]
@@ -126,7 +126,7 @@ class HackberryApp < Sinatra::Base
     redirect '/status'
   end
 
-  # ===== Tasks (only live) =====
+  # ===== Tasks (live only) =====
   get '/tasks' do
     alive = Hackberry::Exec.tmux_list
     TASKS.prune!(alive)
@@ -143,9 +143,10 @@ class HackberryApp < Sinatra::Base
     redirect '/tasks'
   end
 
-  # ===== Logs (clickable list) =====
+  # ===== Logs (clickable) =====
   get '/logs' do
     dir   = CONFIG['paths']['logs']
+    FileUtils.mkdir_p(dir)
     paths = Dir.glob(File.join(dir, '*.log'))
     @log_entries = paths.map { |p|
       { file: File.basename(p), mtime: File.mtime(p), size: File.size(p) }
@@ -153,17 +154,17 @@ class HackberryApp < Sinatra::Base
     erb :logs
   end
 
-  # Simple preview (last 200 lines)
+  # Preview last 200 lines
   get '/log' do
     file = params['file'] or halt 400
     path = File.join(CONFIG['paths']['logs'], File.basename(file))
-    halt 404 unless File.exist?(path)
+    halt 404, 'log not found' unless File.exist?(path)
     @file = File.basename(path)
-    @content = File.readlines(path).last(200).join
+    @content = File.readlines(path).last(200).join rescue ''
     erb :log_view
   end
 
-  # Live SSE stream (by session or by file)
+  # Live SSE tail
   get '/stream' do
     content_type 'text/event-stream'
     log = params['log']
@@ -171,9 +172,9 @@ class HackberryApp < Sinatra::Base
       task = TASKS.find(sess) or halt 404
       log = task['log']
     end
-    halt 400 unless log
+    halt 400, 'no log' unless log
     path = File.join(CONFIG['paths']['logs'], File.basename(log))
-    halt 404 unless File.exist?(path)
+    halt 404, 'log not found' unless File.exist?(path)
 
     stream(:keep_open) do |out|
       begin
@@ -214,7 +215,7 @@ class HackberryApp < Sinatra::Base
     redirect '/config'
   end
 
-  # ===== Caplets (optional editor/run — keep if you already added it) =====
+  # ===== Caplets (editor/runner) =====
   get '/caplets' do
     dir = CONFIG['paths']['caplets']
     Dir.mkdir(dir) unless Dir.exist?(dir)
