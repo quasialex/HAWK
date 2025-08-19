@@ -107,7 +107,6 @@ Needs a public VPS + domain for real-world phishing; local use limited.
 
 ### 📌 pwncat-cs (post-exploitation / C2-ish tool)
 
-```bash
 ---
 
 ### Build Python 3.11 from source
@@ -136,8 +135,7 @@ Then you can do:
 pipx install --python python3.11 pwncat-csp
 ```
 ---
-
-```
+```bash
 
 sudo apt update && sudo apt install -y \
   ruby-full build-essential tmux \
