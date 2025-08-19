@@ -268,59 +268,59 @@ class HackberryApp < Sinatra::Base
     redirect "/tasks?session=#{res[:session]}"
   end
 
-# ===== TTY (interactive terminal) =====
+  # ==== PTY Terminal (tmux-free, reliable) ====
+require_relative 'core/tty'
+
 get '/tty' do
-  @sessions = Hackberry::Exec.tmux_list
+  @sessions = Hackberry::TTY.list
   erb :tty
 end
 
 post '/tty/new' do
-  s = Hackberry::Exec.tmux_new_shell(name: 'tty')   # => {session:, pane:}
-  redirect "/tty/#{s[:session]}"
+  id = Hackberry::TTY.create(log_dir: CONFIG['paths']['logs'])
+  redirect "/tty/#{id}"
 end
 
-get '/tty/:session' do
-  @session = params[:session]
-  halt 404, "No such session" unless Hackberry::Exec.tmux_list.include?(@session)
+get '/tty/:id' do
+  @session = params[:id]
+  halt 404, "No such terminal" unless Hackberry::TTY.list.include?(@session)
   erb :tty
 end
 
-get '/tty/:session/snap' do
+# Poll the last ~2000 bytes of output
+get '/tty/:id/snap' do
   content_type 'text/plain'
-  s = params[:session]
-  halt 404 unless Hackberry::Exec.tmux_list.include?(s)
-  pane = Hackberry::Exec.tmux_active_pane(s)
-  cap  = Hackberry::Exec.tmux_capture(s, pane)
-  cap[:code] == 0 ? cap[:out] : "ERROR capture(code=#{cap[:code]}): #{cap[:err]}".strip
+  id = params[:id]
+  halt 404 unless Hackberry::TTY.list.include?(id)
+  out = Hackberry::TTY.snapshot(id, bytes: 4000)
+  out.empty? ? "[no output yet]" : out
 end
 
-post '/tty/:session/send' do
-  s = params[:session]
-  halt 404 unless Hackberry::Exec.tmux_list.include?(s)
-  pane = Hackberry::Exec.tmux_active_pane(s)
-  key  = params['key'].to_s
-  text = params['text'].to_s
-  if !text.empty?
-    Hackberry::Exec.tmux_send_text(s, pane, text)
-    Hackberry::Exec.tmux_send_key(s, pane, 'Enter')
+# Send text / keys
+post '/tty/:id/send' do
+  id = params[:id]
+  halt 404 unless Hackberry::TTY.list.include?(id)
+  if params['text'] && !params['text'].empty?
+    Hackberry::TTY.write(id, params['text'])
+    Hackberry::TTY.send_key(id, :enter)
   else
-    case key
-    when 'ENTER'  then Hackberry::Exec.tmux_send_key(s, pane, 'Enter')
-    when 'CTRL_C' then Hackberry::Exec.tmux_send_key(s, pane, 'C-c')
-    when 'TAB'    then Hackberry::Exec.tmux_send_key(s, pane, 'Tab')
+    case params['key']
+    when 'ENTER'  then Hackberry::TTY.send_key(id, :enter)
+    when 'CTRL_C' then Hackberry::TTY.send_key(id, :ctrl_c)
+    when 'TAB'    then Hackberry::TTY.send_key(id, :tab)
     end
   end
   status 204
 end
 
-post '/tty/:session/stop' do
-  s = params[:session]
-  Hackberry::Exec.tmux_interrupt(s)
-  Hackberry::Exec.tmux_wait_dead(s, timeout_s: 3)
-  Hackberry::Exec.tmux_kill(s) if Hackberry::Exec.tmux_alive?(s)
+post '/tty/:id/stop' do
+  id = params[:id]
+  Hackberry::TTY.stop(id)
   redirect '/tty'
 end
-# ===== end TTY =====
+# ==== end PTY Terminal ====
+
+
 
   # ===== MSF RPC module picker (autocomplete) =====
   # Safe/optional: requires the 'msfrpc-client' gem and msfrpcd reachable.
