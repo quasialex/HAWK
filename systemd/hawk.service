@@ -1,0 +1,15 @@
+[Unit]
+Description=HAWK web UI
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/hawk
+ExecStart=/usr/bin/env bash -lc 'bundle exec ruby app.rb'
+Restart=on-failure
+Environment=RACK_ENV=production
+
+[Install]
+WantedBy=multi-user.target
