@@ -1,0 +1,20 @@
+<a class="back" href="/">← Home</a>
+<h2>Logs</h2>
+
+<% if @log_entries.empty? %>
+  <p class="muted">No logs yet.</p>
+<% else %>
+  <ul class="sessions">
+    <% @log_entries.each do |e| %>
+      <li>
+        <div>
+          <div class="title"><a class="pill" href="/log?file=<%= e[:file] %>"><%= e[:file] %></a></div>
+          <div class="muted"><%= e[:mtime] %> • <%= (e[:size]/1024.0).round(1) %> KB</div>
+        </div>
+        <div class="actions">
+          <a class="pill" href="/stream?log=<%= e[:file] %>">Live</a>
+        </div>
+      </li>
+    <% end %>
+  </ul>
+<% end %>
