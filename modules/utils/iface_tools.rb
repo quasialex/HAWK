@@ -13,19 +13,19 @@ module Hackberry
     def self.actions
       [
         { id:'mon_start',  label:'Smart Monitor Mode',
-          description:'Kill conflicts → airmon-ng start; if unsupported, passive recon with iw.',
-          inputs:[{name:'iface', label:'Wi-Fi iface', type:'text', placeholder:'wlan0'}] },
+          description:'Kill conflicts → start monitor; if unsupported, passive recon.',
+          inputs:[{name:'iface', label:'Wi‑Fi iface', type:'text', placeholder:'wlan0'}] },
         { id:'mon_stop',   label:'Disable Monitor Mode',
-          description:'airmon-ng stop + restore NM/wpa_supplicant',
+          description:'airmon-ng stop + restore services',
           inputs:[{name:'iface', label:'Monitor iface', type:'text', placeholder:'wlan0mon'}] },
         { id:'psave_off',  label:'Power Save OFF',
           description:'iw set power_save off',
-          inputs:[{name:'iface', label:'Wi-Fi iface', type:'text', placeholder:'wlan0'}] },
+          inputs:[{name:'iface', label:'Wi‑Fi iface', type:'text', placeholder:'wlan0'}] },
         { id:'restore_net',label:'Restore Networking',
           description:'Restart NetworkManager & wpa_supplicant', inputs:[] },
         { id:'caps',       label:'Show Capabilities',
           description:'Driver/chip + supported modes',
-          inputs:[{name:'iface', label:'Wi-Fi iface', type:'text', placeholder:'wlan0'}] }
+          inputs:[{name:'iface', label:'Wi‑Fi iface', type:'text', placeholder:'wlan0'}] }
       ]
     end
 
@@ -55,13 +55,17 @@ module Hackberry
 
           if grep -q "^\\s\\* monitor" /tmp/hawk_iwinfo.txt; then
             echo "[+] $IF supports monitor; driver: ${DRV:-unknown}"
+
+            # If an existing monitor iface is present, stop it to avoid confusion
             MON_PRE="$(iw dev | awk '/type monitor/{print $2; exit}')"
             if [ -n "$MON_PRE" ]; then
-              echo "[i] Found existing monitor iface: $MON_PRE → stopping first"
+              echo "[i] Found existing monitor iface: $MON_PRE — stopping it first"
               airmon-ng stop "$MON_PRE" || true
             fi
+
             echo "[*] airmon-ng start $IF"
             if airmon-ng start "$IF"; then
+              # try to detect the monitor iface created
               MON_IF="$(iw dev | awk '/type monitor/{print $2; exit}')"
               echo "[+] Monitor enabled: ${MON_IF:-${IF}mon}"
               iw dev | sed -n '/Interface/,$p' | sed -n '1,80p'
