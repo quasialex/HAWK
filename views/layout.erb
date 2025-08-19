@@ -24,5 +24,9 @@
   <main>
     <%= yield %>
   </main>
+<form onsubmit="return false;" style="margin:0 1em;">
+  <input type="text" id="msfSearchBox" placeholder="Search MSF modules…" 
+         oninput="msfSearch(this.value).then(r=>console.log(r))">
+</form>
 </body>
 </html>
