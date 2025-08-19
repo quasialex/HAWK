@@ -6,7 +6,6 @@
     <form method="post" action="/tty/<%= @session %>/stop" onsubmit="return confirm('Stop this terminal?');">
       <button class="danger" type="submit">Stop</button>
     </form>
-    <a class="pill" href="/tty/<%= @session %>/debug" target="_blank" style="display:none;">Debug</a>
     <button class="pill" onclick="sendKey('CTRL_C')">Ctrl‑C</button>
     <button class="pill" onclick="sendKey('ENTER')">Enter</button>
     <button class="pill" onclick="sendKey('TAB')">Tab</button>
