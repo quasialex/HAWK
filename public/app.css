@@ -20,6 +20,8 @@ input, select, textarea { width:100%; padding:14px; border-radius:12px; border:1
 button { padding:12px 16px; border-radius:12px; border:0; font-size:16px; background:var(--accent); color:white; font-weight:600; }
 button.danger { background:var(--danger); }
 pre.log { background:#0b0e13; border:1px solid #1f2430; border-radius:12px; padding:12px; overflow:auto; max-height:60vh; }
-.sessions { list-style:none; padding:0; margin:0; }
-.sessions li { display:flex; align-items:center; justify-content:space-between; background:#11151c; border:1px solid #1f2430; border-radius:10px; padding:10px 12px; margin-bottom:8px; gap:12px; }
+.sessions, .tasks { list-style:none; padding:0; margin:0; }
+.sessions li, .tasks li { display:flex; align-items:center; justify-content:space-between; background:#11151c; border:1px solid #1f2430; border-radius:10px; padding:10px 12px; margin-bottom:8px; gap:12px; }
+.tasks li.hl { outline:2px solid var(--accent); }
+.controls { display:flex; gap:10px; align-items:center; margin-bottom:10px; }
 @media (min-width:640px){ .inputs{ grid-template-columns: repeat(2,1fr);} }
