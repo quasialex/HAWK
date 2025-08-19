@@ -2,28 +2,49 @@
 <h2><%= @mod.label %></h2>
 <p class="muted"><%= @mod.id %> — <%= @mod.category %></p>
 
+
+<% if @running && !@running.empty? %>
+<div class="form">
+<h3>Running sessions for this module</h3>
+<ul class="sessions">
+<% @running.each do |t| %>
+<li>
+<code><%= t['session'] %></code>
+<a class="pill small" href="/log?file=<%= File.basename(t['log']) %>">Preview</a>
+<a class="pill small" href="/stream?session=<%= t['session'] %>">Live</a>
+<form method="post" action="/tasks/<%= t['session'] %>/stop" style="display:inline">
+<button class="danger" type="submit">Stop</button>
+</form>
+</li>
+<% end %>
+</ul>
+</div>
+<% end %>
+
+
 <section>
-  <% (@actions || @mod.actions).each do |a| %>
-    <form class="form" method="post" action="/run/<%= @mod.id %>/<%= a[:id] %>">
-      <h3><%= a[:label] %></h3>
-      <p class="desc"><%= a[:description] %></p>
-      <div class="inputs">
-        <% a[:inputs].each do |i| %>
-          <label>
-            <span><%= i[:label] %></span>
-            <% if i[:type] == 'select' %>
-              <select name="<%= i[:name] %>">
-                <% (i[:options] || []).each do |opt| %>
-                  <option value="<%= opt %>" <%= 'selected' if i[:default].to_s == opt.to_s %>><%= opt %></option>
-                <% end %>
-              </select>
-            <% else %>
-              <input type="<%= i[:type] || 'text' %>" name="<%= i[:name] %>" placeholder="<%= i[:placeholder] %>" value="<%= i[:default] %>" />
-            <% end %>
-          </label>
-        <% end %>
-      </div>
-      <button type="submit">Run</button>
-    </form>
-  <% end %>
+<% @actions.each do |a| %>
+<form class="form" method="post" action="/run/<%= @mod.id %>/<%= a[:id] %>">
+<h3><%= a[:label] %></h3>
+<p class="desc"><%= a[:description] %></p>
+<div class="inputs">
+<% a[:inputs].each do |i| %>
+<label>
+<span><%= i[:label] %></span>
+<% if i[:type] == 'select' %>
+<select name="<%= i[:name] %>">
+<% (i[:options] || []).forEach do |opt| %><% end %>
+<% (i[:options] || []).each do |opt| %>
+<option value="<%= opt %>" <%= 'selected' if i[:default].to_s == opt.to_s %>><%= opt %></option>
+<% end %>
+</select>
+<% else %>
+<input type="<%= i[:type] || 'text' %>" name="<%= i[:name] %>" placeholder="<%= i[:placeholder] %>" value="<%= i[:default] %>" />
+<% end %>
+</label>
+<% end %>
+</div>
+<button type="submit">Run</button>
+</form>
+<% end %>
 </section>
