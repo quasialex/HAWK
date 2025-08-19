@@ -13,7 +13,7 @@ module Hackberry
     def self.actions
       [
         { id:'mon_start',  label:'Smart Monitor Mode',
-          description:'Unblock RF‑kill → kill conflicts → start monitor; if unsupported, passive recon.',
+          description:'Unblock → kill conflicts → airmon-ng start; fallback to iw-based monitor.',
           inputs:[{name:'iface', label:'Wi‑Fi iface', type:'text', placeholder:'wlan0'}] },
 
         { id:'mon_stop',   label:'Disable Monitor Mode',
@@ -44,64 +44,56 @@ module Hackberry
           export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
           IF="#{iface}"
 
-          echo "[*] HAWK Smart Monitor: $(date -u +'%F %T')"
-          echo "[i] EUID=$(id -u) USER=$(whoami) PATH=$PATH"
-          if [ "$(id -u)" -ne 0 ]; then
-            echo "[!] Root required."
-            exit 126
-          fi
+          echo "[*] Smart Monitor on $IF @ $(date -u +'%F %T')"
+          [ "$(id -u)" -eq 0 ] || { echo "[!] Run as root."; exit 126; }
 
-          echo "[*] RF‑kill: unblock all"
           rfkill unblock all || true
-          rfkill list || true
-
-          echo "[*] Bring iface up (ip link set $IF up)"
           ip link set "$IF" up || true
 
           DRV="$(ethtool -i "$IF" 2>/dev/null | awk -F': ' '/driver:/ {print $2}')"
           PHY="$(iw dev "$IF" info 2>/dev/null | awk '/wiphy/ {print $2}')"
-          echo "[i] IF=$IF DRIVER=${DRV:-?} PHY=${PHY:-?}"
+          echo "[i] DRIVER=${DRV:-?}  PHY=${PHY:-?}"
 
-          echo "[*] Kill conflicts (airmon-ng check kill)"
+          echo "[*] airmon-ng check kill"
           airmon-ng check kill || true
 
-          echo "[*] Stop any existing monitor ifaces first"
-          PRE_MON="$(iw dev | awk '/Interface/ {n=$2} /type monitor/ {print n}')"
-          if [ -n "$PRE_MON" ]; then
-            echo "$PRE_MON" | sed 's/^/[i] pre-mon: /'
-            while read -r M; do [ -z "$M" ] && continue; airmon-ng stop "$M" || true; done <<< "$PRE_MON"
+          # Stop any existing monitor ifaces
+          PRE="$(iw dev | awk '/Interface/ {n=$2} /type monitor/ {print n}')"
+          if [ -n "$PRE" ]; then
+            echo "[i] Stopping existing monitor ifaces:"
+            echo "$PRE" | sed 's/^/  - /'
+            while read -r M; do [ -z "$M" ] && continue; airmon-ng stop "$M" || true; done <<< "$PRE"
           fi
 
-          echo "[*] Check monitor capability"
-          if iw phy "$PHY" info 2>/dev/null | grep -q "^[[:space:]]*\\* monitor"; then
-            BEFORE="$(iw dev | awk '/Interface/ {n=$2} /type monitor/ {print n}')"
-            echo "[*] airmon-ng start $IF"
-            if airmon-ng start "$IF"; then
-              sleep 1
-              AFTER="$(iw dev | awk '/Interface/ {n=$2} /type monitor/ {print n}')"
-              NEW="$IF" && NEW="${NEW}mon"
-              for x in $AFTER; do
-                FOUND=0; for y in $BEFORE; do [ "$x" = "$y" ] && FOUND=1 && break; done
-                [ $FOUND -eq 0 ] && NEW="$x"
-              done
-              echo "[+] Monitor iface: $NEW"
-              iw dev | sed -n '/Interface/,$p' | sed -n '1,120p'
-              echo "[i] Use $NEW for airodump/wifite."
-            else
-              echo "[!] airmon-ng start failed (driver: ${DRV:-unknown})"
-              exit 2
-            fi
-          else
-            echo "[!] Monitor NOT supported on $IF (driver: ${DRV:-unknown})"
-            echo "    Use a USB adapter with ath9k_htc/mt76 for monitor/injection."
-            echo "[*] Fallback: passive 'iw scan' every 5s (12 cycles)"
-            for i in $(seq 1 12); do
-              echo "--- SCAN #$i ---"
-              iw dev "$IF" scan 2>/dev/null | awk '/^BSS /{mac=$2} /SSID:/{s=$0;sub(\"SSID: \",\"\",s)} /signal:/{sig=$2} /freq:/{f=$2} /^\\t$/{if(mac!=\"\"&&s!=\"\"){printf \"BSS %s  sig %s dBm  freq %s  ssid %s\\n\",mac,sig,f,s; mac=\"\"; s=\"\"; sig=\"\"; f=\"\"}}'
-              sleep 5
-            done
-            echo "[*] Fallback recon ended."
+          echo "[*] Try airmon-ng start $IF"
+          if airmon-ng start "$IF"; then
+            sleep 1
+            MON="$(iw dev | awk '/Interface/ {n=$2} /type monitor/ {print n; exit}')"
+            [ -z "$MON" ] && MON="${IF}mon"
+            echo "[+] Monitor iface: $MON"
+            exit 0
           fi
+
+          echo "[!] airmon-ng failed; trying iw fallback"
+          # iw fallback
+          # 1) try to set existing iface to monitor
+          if iw dev "$IF" set type monitor 2>/dev/null; then
+            ip link set "$IF" up || true
+            echo "[+] Monitor iface: $IF"
+            exit 0
+          fi
+
+          # 2) create a separate monitor interface
+          MON="mon0"
+          iw dev "$IF" interface add "$MON" type monitor 2>/dev/null || true
+          ip link set "$MON" up 2>/dev/null || true
+          if iw dev | awk '/Interface/ {n=$2} /type monitor/ {print n}' | grep -q "^$MON$"; then
+            echo "[+] Monitor iface: $MON"
+            exit 0
+          fi
+
+          echo "[!] Monitor not supported by driver (${DRV:-unknown})"
+          exit 2
         BASH
         return Hackberry::Exec.tmux_run_script(name:'iface', content: script, log_path: log)
 
@@ -111,16 +103,20 @@ module Hackberry
           set -e
           export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
           IF="#{iface}"
-          if [ "$(id -u)" -ne 0 ]; then
-            echo "[!] Root required."
-            exit 126
-          fi
+          [ "$(id -u)" -eq 0 ] || { echo "[!] Run as root."; exit 126; }
+
           echo "[*] airmon-ng stop $IF"
           airmon-ng stop "$IF" || true
-          echo "[*] Restart NetworkManager & wpa_supplicant"
+
+          # also try iw delete if it's a custom mon iface
+          if iw dev | awk '/Interface/ {n=$2} /type monitor/ {print n}' | grep -q "^$IF$"; then
+            iw dev "$IF" del || true
+          fi
+
+          echo "[*] Restarting NetworkManager & wpa_supplicant"
           systemctl restart NetworkManager 2>/dev/null || true
           systemctl restart wpa_supplicant 2>/dev/null || true
-          ip link show
+          ip a
         BASH
         return Hackberry::Exec.tmux_run_script(name:'iface', content: script, log_path: log)
 
@@ -130,10 +126,7 @@ module Hackberry
           set -e
           export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
           IF="#{iface}"
-          if [ "$(id -u)" -ne 0 ]; then
-            echo "[!] Root required."
-            exit 126
-          fi
+          [ "$(id -u)" -eq 0 ] || { echo "[!] Run as root."; exit 126; }
           iw dev "$IF" set power_save off
           iw dev "$IF" get power_save
         BASH
@@ -143,11 +136,7 @@ module Hackberry
         script = <<~BASH
           set -e
           export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-          if [ "$(id -u)" -ne 0 ]; then
-            echo "[!] Root required."
-            exit 126
-          fi
-          echo "[*] Restoring network services"
+          [ "$(id -u)" -eq 0 ] || { echo "[!] Run as root."; exit 126; }
           systemctl restart NetworkManager 2>/dev/null || true
           systemctl restart wpa_supplicant 2>/dev/null || true
           nmcli general status 2>/dev/null || true
@@ -163,11 +152,9 @@ module Hackberry
           DRV="$(ethtool -i "$IF" 2>/dev/null | awk -F': ' '/driver:/ {print $2}')"
           PHY="$(iw dev "$IF" info 2>/dev/null | awk '/wiphy/ {print $2}')"
           echo "IF: $IF  DRIVER: ${DRV:-unknown}  PHY: ${PHY:-?}"
-          echo "=== iw phy info ==="
           iw phy "$PHY" info 2>/dev/null || true
         BASH
         return Hackberry::Exec.tmux_run_script(name:'iface', content: script, log_path: log)
-
       else
         raise 'unknown action'
       end
