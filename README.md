@@ -155,7 +155,8 @@ sudo apt update && sudo apt install -y \
 # optional RPC gem
 sudo gem install msfrpc-client
 
+bundle config set --local path 'vendor/bundle'
 bundle install
 
-bin/run → open http://127.0.0.1:4567 (fullscreen for touch).
+bin/run → open http://127.0.0.1:4567
 ```
