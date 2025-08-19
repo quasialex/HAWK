@@ -47,14 +47,13 @@ module Hackberry
       save
     end
 
-    # NEW: keep only sessions that are actually alive in tmux AND marked running
+    # Keep only running tasks that still exist in tmux
     def prune!(alive_sessions)
       before = @data.length
       @data.select! { |t| t['status'] == 'running' && alive_sessions.include?(t['session']) }
       save if @data.length != before
     end
 
-    # NEW: helper to list running tasks against tmux
     def running(alive_sessions)
       @data.select { |t| t['status'] == 'running' && alive_sessions.include?(t['session']) }
     end
