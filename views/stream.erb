@@ -1,0 +1,24 @@
+<a class="back" href="/tasks">← Tasks</a>
+<h2>Live Log</h2>
+<div class="controls">
+<button id="pause" class="pill">Pause</button>
+<label class="pill"><input id="scroll" type="checkbox" checked /> Auto‑scroll</label>
+</div>
+<pre class="log" id="live"></pre>
+<script>
+const live = document.getElementById('live');
+const pauseBtn = document.getElementById('pause');
+const scrollChk = document.getElementById('scroll');
+let es, paused=false;
+const url = new URL(window.location);
+const session = url.searchParams.get('session');
+const file = url.searchParams.get('file');
+function connect(){
+const qs = session?`session=${encodeURIComponent(session)}`:`log=${encodeURIComponent(file)}`;
+es = new EventSource(`/stream?${qs}`);
+es.onmessage = (e)=>{ if(paused) return; live.textContent += e.data + "
+"; if(scrollChk.checked) live.scrollTop = live.scrollHeight; };
+}
+pauseBtn.onclick = ()=>{ paused = !paused; pauseBtn.textContent = paused? 'Resume' : 'Pause'; };
+connect();
+</script>
