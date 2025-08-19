@@ -8,6 +8,7 @@ module Hackberry
   module Exec
     module_function
 
+    # ----- dirs / timestamps ---------------------------------------------------
     def ensure_dirs(cfg)
       FileUtils.mkdir_p cfg['paths']['logs']
       FileUtils.mkdir_p cfg['paths']['captures']
@@ -18,6 +19,7 @@ module Hackberry
       Time.now.utc.strftime('%Y%m%d-%H%M%S')
     end
 
+    # ----- shell utilities -----------------------------------------------------
     def run_capture(cmd)
       stdout, stderr, status = Open3.capture3({'LC_ALL'=>'C'}, cmd)
       { out: stdout, err: stderr, code: status.exitstatus }
@@ -27,8 +29,8 @@ module Hackberry
       %(bash -lc 'export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"; #{inner}')
     end
 
-    # --- tmux helpers ---
-
+    # ----- tmux utilities ------------------------------------------------------
+    # start a tmux session running a command, teeing to a log
     def tmux_run(name:, cmd:, log_path:)
       session = "#{name}-#{timestamp}"
       FileUtils.mkdir_p File.dirname(log_path)
@@ -37,6 +39,7 @@ module Hackberry
       { session: session, cmd: cmd, log: log_path }
     end
 
+    # run a multi-line script
     def tmux_run_script(name:, content:, log_path:)
       session = "#{name}-#{timestamp}"
       FileUtils.mkdir_p File.dirname(log_path)
@@ -48,12 +51,25 @@ module Hackberry
       { session: session, cmd: "/bin/bash #{script}", log: log_path, script: script }
     end
 
-    # Interactive shell (no tee) for the web terminal
+    # Create an interactive shell and return {session:, pane:}
+    # We use `script -q -c` to guarantee a PTY and visible prompt.
     def tmux_new_shell(name: 'tty')
       session = "#{name}-#{timestamp}"
-      full = %(tmux new-session -d -s #{session.shellescape} #{sh_with_env(%Q{"bash --login -i"})})
-      system(full)
-      session
+      start = %(tmux new-session -d -s #{session.shellescape} #{sh_with_env(%Q{"script -q -c 'bash --login -i' /dev/null"})})
+      system(start)
+      # find the active pane id
+      pane = tmux_active_pane(session)
+      # print a banner so the first snapshot is not empty
+      tmux_send_text(session, pane, "echo '[HAWK TTY] #{Time.now.utc}'; pwd; whoami; echo $SHELL")
+      tmux_send_key(session, pane, 'Enter')
+      { session: session, pane: pane }
+    end
+
+    def tmux_active_pane(session)
+      out = run_capture(%(tmux list-panes -F '\#{pane_id}' -t #{session.shellescape}))
+      pid = out[:out].lines.first.to_s.strip
+      pid = '%0' if pid.empty? # fallback (usually 0.0)
+      pid
     end
 
     def tmux_list(prefix: nil)
@@ -68,8 +84,32 @@ module Hackberry
       tmux_list.include?(session)
     end
 
+    def tmux_send_key(session, pane, key)
+      target = "#{session}:0.0"
+      target = "#{session}:#{pane}" if pane && !pane.empty? && pane != '%0'
+      case key
+      when 'Enter'   then run_capture(%(tmux send-keys -t #{target.shellescape} Enter))
+      when 'C-c','CTRL_C' then run_capture(%(tmux send-keys -t #{target.shellescape} C-c))
+      when 'Tab'     then run_capture(%(tmux send-keys -t #{target.shellescape} Tab))
+      else
+        run_capture(%(tmux send-keys -t #{target.shellescape} #{key}))
+      end
+    end
+
+    def tmux_send_text(session, pane, text)
+      target = "#{session}:0.0"
+      target = "#{session}:#{pane}" if pane && !pane.empty? && pane != '%0'
+      run_capture(%(tmux send-keys -t #{target.shellescape} -- #{text.shellescape}))
+    end
+
+    def tmux_capture(session, pane)
+      target = "#{session}:0.0"
+      target = "#{session}:#{pane}" if pane && !pane.empty? && pane != '%0'
+      run_capture(%(tmux capture-pane -p -J -S -2000 -t #{target.shellescape}))
+    end
+
     def tmux_interrupt(session)
-      run_capture(%(tmux send-keys -t #{session.shellescape}:0.0 C-c))
+      tmux_send_key(session, nil, 'C-c')
     end
 
     def tmux_wait_dead(session, timeout_s: 5)
