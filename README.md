@@ -156,7 +156,5 @@ sudo gem install msfrpc-client
 bundle config set --local path 'vendor/bundle'
 bundle install
 
-
-sudo bin/run
-open http://127.0.0.1:4567
+sudo ./hawk
 ```
