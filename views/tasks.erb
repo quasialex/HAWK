@@ -12,8 +12,8 @@
 <div class="muted">CMD: <code><%= t['cmd'] %></code></div>
 </div>
 <div class="actions">
-<a class="pill small" href="/log?file=<%= File.basename(t['log']) %>">Preview</a>
-<a class="pill small" href="/stream?session=<%= t['session'] %>">Live</a>
+<a class="pill" href="/log?file=<%= File.basename(t['log']) %>">Preview</a>
+<a class="pill" href="/stream?session=<%= t['session'] %>">Live</a>
 <form method="post" action="/tasks/<%= t['session'] %>/stop">
 <button class="danger" type="submit">Stop</button>
 </form>
