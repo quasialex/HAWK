@@ -13,6 +13,8 @@ require_relative 'core/ui_helpers'
 require_relative 'core/ifaces'
 require_relative 'core/profiles'
 require_relative 'core/tasks'
+require_relative 'routes/tty'
+
 
 # Autoload modules
 Dir[File.join(__dir__, 'modules', '**', '*.rb')].sort.each { |f| require f }
