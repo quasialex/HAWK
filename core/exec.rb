@@ -38,5 +38,15 @@ module Hackberry
     def tmux_kill(session)
       run_capture("tmux kill-session -t #{session}")
     end
+    
+    def tmux_run_script(name:, content:, log_path:)
+      session = "#{name}-#{timestamp}"
+       script  = File.join('/tmp', "hawk_#{name}_#{timestamp}.sh")
+       File.write(script, content)
+       File.chmod(0755, script)
+       full_cmd = %(tmux new-session -d -s #{session} "/bin/bash #{script} 2>&1 | tee -a #{log_path}")
+       system(full_cmd)
+       { session: session, cmd: "/bin/bash #{script}", log: log_path, script: script }
+    end
   end
 end
