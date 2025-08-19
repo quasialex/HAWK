@@ -1,12 +1,8 @@
 <a class="back" href="/">← Home</a>
 <h2>Tasks</h2>
 
-<div class="controls">
-  <label class="pill"><input id="autoref" type="checkbox" checked /> Auto-refresh</label>
-</div>
-
 <% if @tasks.empty? %>
-  <p class="muted">No tasks yet.</p>
+  <p class="muted">No running tasks.</p>
 <% else %>
   <ul class="tasks">
     <% @tasks.reverse.each do |t| %>
@@ -27,10 +23,3 @@
     <% end %>
   </ul>
 <% end %>
-
-<script>
-  (function(){
-    const chk = document.getElementById('autoref');
-    setInterval(function(){ if (chk && chk.checked) location.reload(); }, 4000);
-  })();
-</script>
