@@ -24,7 +24,7 @@
         headers:{'Content-Type':'application/x-www-form-urlencoded'},
         body:`key=${encodeURIComponent(key)}`
       });
-      setTimeout(snap, 150);
+      setTimeout(snap, 120);
     };
 
     window.sendText = async function(){
@@ -36,7 +36,7 @@
         body:`text=${encodeURIComponent(t)}`
       });
       box.value = '';
-      setTimeout(snap, 200);
+      setTimeout(snap, 150);
     };
 
     box.addEventListener('keydown', (e)=>{
