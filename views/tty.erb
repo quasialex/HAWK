@@ -11,15 +11,49 @@
     <button class="pill" onclick="sendKey('TAB')">Tab</button>
   </div>
 
-  <pre id="tty" class="log" style="height:58vh; overflow:auto; white-space:pre-wrap;"></pre>
+  <pre id="tty" class="log" style="height:58vh; overflow:auto; white-space:pre-wrap; background:#111; color:#ddd; padding:10px; border-radius:8px;"></pre>
 
   <div style="display:flex; gap:8px; margin-top:8px;">
-    <input id="cmd" placeholder="Type command…" style="flex:1; padding:12px; border-radius:10px; border:1px solid #2a2f3a; background:#0f131a; color:#e6e6e6;">
-    <button onclick="sendText()" class="pill">Send</button>
+    <input id="cmd" type="text" placeholder="type a command…" style="flex:1; padding:8px; border-radius:6px; border:1px solid #444; background:#181818; color:#eee">
+    <button class="pill" onclick="sendText()">Send</button>
   </div>
 
-  <script src="/tty.js"></script>
-  <script>TTY_BOOT({ session: "<%= @session %>" });</script>
+  <script>
+    const session = "<%= @session %>";
+    const logEl = document.getElementById('tty');
+    const cmdEl = document.getElementById('cmd');
+
+    async function refresh() {
+      try {
+        const r = await fetch(`/tty/${session}/poll?lines=2000`, {cache:'no-store'});
+        if (!r.ok) return;
+        const data = await r.json();
+        logEl.textContent = data.text || '';
+        logEl.scrollTop = logEl.scrollHeight;
+      } catch(e) {
+        console.error(e);
+      }
+    }
+    setInterval(refresh, 1000);
+    refresh();
+
+    async function sendText() {
+      const text = cmdEl.value;
+      cmdEl.value = '';
+      await fetch(`/tty/${session}/send`, {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: new URLSearchParams({text, enter:'1'})});
+      setTimeout(refresh, 150);
+    }
+    async function sendKey(key) {
+      await fetch(`/tty/${session}/send`, {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: new URLSearchParams({key})});
+      setTimeout(refresh, 150);
+    }
+    cmdEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); sendText(); }
+      if (e.key === 'Tab')   { e.preventDefault(); sendKey('TAB'); }
+      if (e.key === 'c' && e.ctrlKey) { e.preventDefault(); sendKey('CTRL_C'); }
+    });
+  </script>
+
 <% else %>
   <form method="post" action="/tty/new">
     <button type="submit" class="pill">New Shell</button>

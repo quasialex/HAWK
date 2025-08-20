@@ -1,11 +1,1 @@
-[
-  {
-    "session": "ble-20250820-192910",
-    "module_id": "ble_recon",
-    "action": "scan",
-    "cmd": "/bin/bash /tmp/hawk_ble_20250820-192910.sh",
-    "log": "ble-20250820-192910.log",
-    "started": "2025-08-20T19:29:10Z",
-    "status": "running"
-  }
-]
+[]
