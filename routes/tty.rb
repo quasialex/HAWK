@@ -1,80 +1,56 @@
 # routes/tty.rb
-require 'shellwords'
-require_relative '../core/exec'
+require_relative '../core/tty'
 
 class HackberryApp < Sinatra::Base
-  # Index
+  # Index: list existing PTY sessions
   get '/tty' do
-    @sessions = Hackberry::Exec.tmux_list
+    @sessions = Hackberry::TTY.list
     erb :tty
   end
 
-  # New terminal
+  # Create a new PTY-backed shell and redirect to it
   post '/tty/new' do
-    s = Hackberry::Exec.tmux_new_shell(name: 'tty')
-    session = s[:session]
-    redirect "/tty/#{session}"
+    id = Hackberry::TTY.create(log_dir: CONFIG['paths']['logs'])
+    redirect "/tty/#{id}"
   end
 
-  # Terminal page
-  get '/tty/:session' do
-    @session = params[:session]
-    halt 404, "No such session" unless Hackberry::Exec.tmux_list.include?(@session)
+  # Render terminal page for given session
+  get '/tty/:id' do
+    @session = params[:id]
+    halt 404, 'No such terminal' unless Hackberry::TTY.list.include?(@session)
     erb :tty
   end
 
-  # Snapshot (returns plain text or a one-line error)
-  get '/tty/:session/snap' do
+  # Snapshot last bytes of output
+  get '/tty/:id/snap' do
     content_type 'text/plain'
-    s = params[:session]
-    halt 404 unless Hackberry::Exec.tmux_list.include?(s)
-    pane = Hackberry::Exec.tmux_active_pane(s)
-    cap  = Hackberry::Exec.tmux_capture(s, pane)
-    if cap[:code] == 0
-      cap[:out]
-    else
-      "ERROR: tmux capture failed (code=#{cap[:code]}): #{cap[:err]}".strip
-    end
+    id = params[:id]
+    halt 404 unless Hackberry::TTY.list.include?(id)
+    out = Hackberry::TTY.snapshot(id, bytes: 4000)
+    out.empty? ? "[no output yet]" : out
   end
 
-  # Send
-  post '/tty/:session/send' do
-    s = params[:session]
-    halt 404 unless Hackberry::Exec.tmux_list.include?(s)
-    pane = Hackberry::Exec.tmux_active_pane(s)
-
-    key  = params['key'].to_s
-    text = params['text'].to_s
-
-    if !text.empty?
-      Hackberry::Exec.tmux_send_text(s, pane, text)
-      Hackberry::Exec.tmux_send_key(s, pane, 'Enter')
+  # Send text or special keys to the shell
+  post '/tty/:id/send' do
+    id = params[:id]
+    halt 404 unless Hackberry::TTY.list.include?(id)
+    if params['text'] && !params['text'].empty?
+      Hackberry::TTY.write(id, params['text'])
+      Hackberry::TTY.send_key(id, :enter)
     else
-      case key
-      when 'ENTER'   then Hackberry::Exec.tmux_send_key(s, pane, 'Enter')
-      when 'CTRL_C'  then Hackberry::Exec.tmux_send_key(s, pane, 'C-c')
-      when 'TAB'     then Hackberry::Exec.tmux_send_key(s, pane, 'Tab')
+      case params['key']
+      when 'ENTER'  then Hackberry::TTY.send_key(id, :enter)
+      when 'CTRL_C' then Hackberry::TTY.send_key(id, :ctrl_c)
+      when 'TAB'    then Hackberry::TTY.send_key(id, :tab)
       end
     end
     status 204
   end
 
-  # Stop
-  post '/tty/:session/stop' do
-    s = params[:session]
-    Hackberry::Exec.tmux_interrupt(s)
-    Hackberry::Exec.tmux_wait_dead(s, timeout_s: 3)
-    Hackberry::Exec.tmux_kill(s) if Hackberry::Exec.tmux_alive?(s)
+  # Stop session
+  post '/tty/:id/stop' do
+    id = params[:id]
+    Hackberry::TTY.stop(id)
     redirect '/tty'
-  end
-
-  # Debug info (pane/window list)
-  get '/tty/:session/debug' do
-    content_type 'text/plain'
-    s = params[:session]
-    halt 404 unless Hackberry::Exec.tmux_list.include?(s)
-    out1 = Hackberry::Exec.run_capture(%(tmux list-windows -a -F '#{session_name}:#{window_index} #{window_active} #{window_name}')).values_at(:out,:err,:code)
-    out2 = Hackberry::Exec.run_capture(%(tmux list-panes -a -F '#{session_name}:#{window_index}.#{pane_index} #{pane_id} #{pane_active}')).values_at(:out,:err,:code)
-    "WINDOWS:\n#{out1[0]}\nPANES:\n#{out2[0]}"
   end
 end

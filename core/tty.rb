@@ -4,6 +4,7 @@ require 'io/console'
 require 'securerandom'
 require 'fileutils'
 require 'thread'
+require 'timeout'
 
 module Hackberry
   module TTY
@@ -62,14 +63,16 @@ module Hackberry
             ensure
               begin master.close unless master.closed?; rescue; end
               begin slave.close  unless slave.closed?;  rescue; end
+              @lock.synchronize { @sessions.delete(id) }
             end
           end
         end
 
+        @lock.synchronize { @sessions[id] = sess }
+
         # Friendly banner
         write(id, "echo '[HAWK TTY] #{Time.now.utc}'; pwd; whoami; echo $SHELL\n")
 
-        @lock.synchronize { @sessions[id] = sess }
         id
       end
 
@@ -77,7 +80,7 @@ module Hackberry
       def write(id, text)
         sess = @lock.synchronize { @sessions[id] }
         return false unless sess
-        sess.master.write(text)
+        sess.slave.write(text)
         true
       rescue Errno::EIO, IOError
         false
