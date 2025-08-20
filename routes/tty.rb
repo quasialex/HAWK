@@ -60,8 +60,8 @@ class HackberryApp < Sinatra::Base
     content_type 'text/plain'
     s = params[:session]
     halt 404 unless Hackberry::Exec.tmux_alive?(s)
-    out1, _e1, _c1 = Hackberry::Exec.run_capture(%(#{Hackberry::Exec::TMUX} list-windows -a -F '\#{session_name}:\#{window_index} \#{window_active} \#{window_name}'))
-    out2, _e2, _c2 = Hackberry::Exec.run_capture(%(#{Hackberry::Exec::TMUX} list-panes -a -F '\#{session_name}:\#{window_index}.\#{pane_index} \#{pane_id} \#{pane_active}'))
+    out1, _e1, _c1 = Hackberry::Exec.run_capture(%(#{Hackberry::Exec::TMUX} list-windows -a -F '\#{session_name}:\#{window_index} \#{window_active} \#{window_name}').values_at(:out,:err,:code))
+    out2, _e2, _c2 = Hackberry::Exec.run_capture(%(#{Hackberry::Exec::TMUX} list-panes -a -F '\#{session_name}:\#{window_index}.\#{pane_index} \#{pane_id} \#{pane_active}').values_at(:out,:err,:code))
     "WINDOWS:\n#{out1}\nPANES:\n#{out2}"
   end
 end

@@ -4,7 +4,7 @@
       "iface": "wlan0"
     },
     "mon_stop": {
-      "iface": "wlan0mon"
+      "iface": "wlan0"
     },
     "caps": {
       "iface": "wlan0"

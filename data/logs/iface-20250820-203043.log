@@ -1,0 +1,6 @@
+[*] Smart Monitor on wlan0 @ 2025-08-20 20:30:43
+[i] DRIVER=brcmfmac  PHY=0
+[*] airmon-ng check kill
+
+
+/tmp/hawk_iface_20250820-203043.sh: 23: Syntax error: redirection unexpected
