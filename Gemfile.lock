@@ -1,0 +1,48 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    base64 (0.3.0)
+    json (2.13.2)
+    msfrpc-client (1.1.2)
+      msgpack (~> 1)
+    msgpack (1.8.0)
+    multi_json (1.17.0)
+    mustermann (3.0.4)
+      ruby2_keywords (~> 0.0.1)
+    nio4r (2.7.4)
+    puma (6.6.1)
+      nio4r (~> 2.0)
+    rack (2.2.17)
+    rack-protection (3.2.0)
+      base64 (>= 0.1.0)
+      rack (~> 2.2, >= 2.2.4)
+    ruby2_keywords (0.0.5)
+    sinatra (3.2.0)
+      mustermann (~> 3.0)
+      rack (~> 2.2, >= 2.2.4)
+      rack-protection (= 3.2.0)
+      tilt (~> 2.0)
+    sinatra-contrib (3.2.0)
+      multi_json (>= 0.0.2)
+      mustermann (~> 3.0)
+      rack-protection (= 3.2.0)
+      sinatra (= 3.2.0)
+      tilt (~> 2.0)
+    tilt (2.6.1)
+
+PLATFORMS
+  aarch64-linux-gnu
+  ruby
+
+DEPENDENCIES
+  json
+  msfrpc-client
+  puma
+  rack
+  rack-protection
+  sinatra
+  sinatra-contrib
+  tilt
+
+BUNDLED WITH
+   2.6.7

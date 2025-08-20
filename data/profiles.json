@@ -1,0 +1,57 @@
+{
+  "utils_iface": {
+    "mon_start": {
+      "iface": "wlan0"
+    },
+    "mon_stop": {
+      "iface": "wlan0mon"
+    },
+    "caps": {
+      "iface": "wlan0"
+    }
+  },
+  "ble_recon": {
+    "scan": {
+      "iface": "hci0"
+    }
+  },
+  "ble_scan": {
+    "scan": {
+      "iface": "hci0"
+    }
+  },
+  "ble_bluehydra": {
+    "run": {}
+  },
+  "wifi_airodump": {
+    "scan": {
+      "iface": "wlan0",
+      "channel": "",
+      "bssid": ""
+    }
+  },
+  "wifi_wifite": {
+    "target": {
+      "iface": "wlan0mon",
+      "bssid": "",
+      "channel": ""
+    },
+    "quick": {
+      "iface": "wlan0",
+      "dur": "10"
+    }
+  },
+  "wifi_beacon": {
+    "spam": {
+      "iface": "wlan0",
+      "ssid": "",
+      "count": "20"
+    }
+  },
+  "wifi_wifiphisher": {
+    "auto": {
+      "iface": "wlan0",
+      "essid": ""
+    }
+  }
+}
