@@ -1,11 +1,1 @@
-[
-  {
-    "session": "iface-20250820-203108",
-    "module_id": "utils_iface",
-    "action": "mon_stop",
-    "cmd": "/tmp/hawk_iface_20250820-203108.sh",
-    "log": "iface-20250820-203108.log",
-    "started": "2025-08-20T20:31:09Z",
-    "status": "running"
-  }
-]
+[]

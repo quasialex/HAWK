@@ -1,0 +1,24 @@
+[*] Smart Monitor on wlan0 @ 2025-08-21 07:27:38
+[i] DRIVER=brcmfmac  PHY=0
+[*] airmon-ng check kill
+
+Killing these processes:
+
+    PID Name
+    602 dhcpcd
+    603 dhcpcd
+    604 dhcpcd
+    605 dhcpcd
+    867 wpa_supplicant
+
+[*] Try airmon-ng start wlan0
+
+
+PHY	Interface	Driver		Chipset
+
+phy0	wlan0		brcmfmac	Broadcom 43455
+		(mac80211 monitor mode vif enabled for [phy0]wlan0 on [phy0]wlan0mon)
+command failed: Unknown error 524 (-524)
+		(mac80211 station mode vif disabled for [phy0]wlan0)
+
+[+] Monitor iface: wlan0mon

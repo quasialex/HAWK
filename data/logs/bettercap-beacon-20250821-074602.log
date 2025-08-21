@@ -1,0 +1,1 @@
+stdbuf: failed to run command 'bettercap -eval "set wifi.interface wlan0mon; wifi.recon on; wifi.show; set wifi.ap.ssid MIWIFI_5G_pwLW; set wifi.ap.count 50; wifi.ap.start; events.stream on;"': No such file or directory

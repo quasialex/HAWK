@@ -1,0 +1,15 @@
+[*] Smart Monitor on wlan0 @ 2025-08-21 07:36:21
+[i] DRIVER=brcmfmac  PHY=0
+[*] airmon-ng check kill
+
+
+[*] Try airmon-ng start wlan0
+
+
+PHY	Interface	Driver		Chipset
+
+phy0	wlan0		brcmfmac	Broadcom 43455
+
+ERROR adding monitor mode interface: command failed: Operation not supported (-95)
+[!] airmon-ng failed; trying iw fallback
+[!] Monitor not supported by driver (brcmfmac)

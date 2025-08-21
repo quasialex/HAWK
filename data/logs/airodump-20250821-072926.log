@@ -1,0 +1,1 @@
+stdbuf: failed to run command 'airodump-ng --write-interval 1 --write data/logs/airodump-20250821-072926 wlan0mon': No such file or directory

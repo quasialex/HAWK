@@ -8,6 +8,11 @@ module Hackberry
   module Exec
     module_function
 
+    def auto_exit_for?(name)
+      n = name.to_s
+      !!(n =~ /(\biface\b|utils_iface|monitor|mon_mode|iface_tools)/i)
+    end
+
     # ---- tmux socket & server management ----
     TMUX_DIR  = ENV['HAWK_TMUX_DIR'] || '/tmp/hawk-tmux'
     TMUX_SOCK = File.join(TMUX_DIR, 'tmux.sock')
@@ -90,11 +95,10 @@ module Hackberry
       session = "#{name}-#{timestamp}"
       touch_log(log_path)
       shell = ENV['SHELL'] || '/bin/bash'
-      # create detached login shell
       run_capture(%(#{TMUX} new-session -d -s #{session.shellescape} #{Shellwords.escape(shell)} -l))
-      # compose pipeline, then type it and press Enter
       cmd_sq = cmd.gsub("'", %q('"'"'))
       inner  = %Q{set -o pipefail; stdbuf -oL -eL '#{cmd_sq}' 2>&1 | tee -a #{Shellwords.escape(log_path)}}
+      inner << "; exit" if auto_exit_for?(name)
       run_capture(%(#{TMUX} send-keys -t #{session.shellescape} -l -- #{Shellwords.escape(inner)}))
       run_capture(%(#{TMUX} send-keys -t #{session.shellescape} Enter))
       { session: session, cmd: cmd, log: log_path }
@@ -118,11 +122,20 @@ module Hackberry
       session = "#{name}-#{timestamp}"
       touch_log(log_path)
       script  = File.join('/tmp', "hawk_#{name}_#{timestamp}.sh")
-      File.write(script, content)
+      # prepend shebang unless provided
+      body = content.to_s
+      unless body.start_with?('#!')
+        body = "#!/usr/bin/env bash
+set -euo pipefail
+
+" + body
+      end
+      File.write(script, body)
       File.chmod(0755, script) rescue nil
       shell = ENV['SHELL'] || '/bin/bash'
       run_capture(%(#{TMUX} new-session -d -s #{session.shellescape} #{Shellwords.escape(shell)} -l))
-      inner = %Q{set -o pipefail; stdbuf -oL -eL '#{script}' 2>&1 | tee -a #{Shellwords.escape(log_path)}}
+      inner = %Q{set -o pipefail; stdbuf -oL -eL bash #{script.shellescape} 2>&1 | tee -a #{Shellwords.escape(log_path)}}
+      inner << "; exit" if auto_exit_for?(name)
       run_capture(%(#{TMUX} send-keys -t #{session.shellescape} -l -- #{Shellwords.escape(inner)}))
       run_capture(%(#{TMUX} send-keys -t #{session.shellescape} Enter))
       { session: session, cmd: script, log: log_path }

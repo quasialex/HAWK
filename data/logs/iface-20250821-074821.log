@@ -1,0 +1,2 @@
+STATE      CONNECTIVITY  WIFI-HW  WIFI     WWAN-HW  WWAN     METERED 
+connected  none          enabled  enabled  missing  enabled  unknown 

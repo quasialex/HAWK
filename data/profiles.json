@@ -4,11 +4,12 @@
       "iface": "wlan0"
     },
     "mon_stop": {
-      "iface": "wlan0"
+      "iface": "wlan0mon"
     },
     "caps": {
-      "iface": "wlan0"
-    }
+      "iface": "wlan0mon"
+    },
+    "restore_net": {}
   },
   "ble_recon": {
     "scan": {
@@ -25,7 +26,7 @@
   },
   "wifi_airodump": {
     "scan": {
-      "iface": "wlan0",
+      "iface": "wlan0mon",
       "channel": "",
       "bssid": ""
     }
@@ -37,21 +38,40 @@
       "channel": ""
     },
     "quick": {
-      "iface": "wlan0",
+      "iface": "wlan0mon",
       "dur": "10"
     }
   },
   "wifi_beacon": {
     "spam": {
-      "iface": "wlan0",
-      "ssid": "",
-      "count": "20"
+      "iface": "wlan0mon",
+      "ssid": "MIWIFI_5G_pwLW",
+      "count": "50"
     }
   },
   "wifi_wifiphisher": {
     "auto": {
       "iface": "wlan0",
       "essid": ""
+    }
+  },
+  "wifi_hcxdump": {
+    "pmkid": {
+      "iface": "wlan0mon",
+      "chan": "",
+      "timeout": "5"
+    }
+  },
+  "wifi_eaphammer": {
+    "eap": {
+      "iface": "wlan0mon",
+      "essid": "CorpWiFi",
+      "channel": "6"
+    }
+  },
+  "wifi_hostapd_wpe": {
+    "start": {
+      "conf": "/etc/hostapd-wpe/hostapd-wpe.conf"
     }
   }
 }

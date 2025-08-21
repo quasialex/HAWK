@@ -1,0 +1,1 @@
+stdbuf: failed to run command 'timeout 10m wifite -i wlan0mon -mac --pmkid --no-colors -v -o data/captures': No such file or directory

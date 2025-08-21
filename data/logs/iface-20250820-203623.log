@@ -1,0 +1,10 @@
+[*] Smart Monitor on wlan0 @ 2025-08-20 20:36:23
+[i] DRIVER=brcmfmac  PHY=0
+[*] airmon-ng check kill
+
+Killing these processes:
+
+    PID Name
+  21150 wpa_supplicant
+
+/tmp/hawk_iface_20250820-203623.sh: 23: Syntax error: redirection unexpected

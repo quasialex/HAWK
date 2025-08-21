@@ -1,0 +1,1 @@
+IF: wlan0mon  DRIVER: brcmfmac  PHY: 0
